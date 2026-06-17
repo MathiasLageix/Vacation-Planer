@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.3.4.0] - 2026-06-17
+
+### Fixed
+- **`frontend/.npmrc`** : `cache=false` — désactive le cache disque npm qui causait `EBUSY: resource busy or locked, rmdir node_modules/.cache` lors du build Railway (filesystem éphémère Nixpacks)
+- **`frontend/railway.toml`** : `npm ci` → `npm ci --prefer-offline` — utilise les modules Nixpacks déjà résolus sans retenter d'écrire dans le cache réseau
+
 ## [0.3.3.0] - 2026-06-17
 
 ### Added
