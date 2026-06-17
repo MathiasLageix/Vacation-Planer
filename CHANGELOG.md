@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.4.0.0] - 2026-06-17
+
+### Changed
+- **`providers/rapidapi_flights.py`** (nouveau) : remplace Duffel pour la recherche de vols. Utilise l'API Google Flights Live by Matan Rabi (`google-flights-live-api.p.rapidapi.com`). Endpoints POST `/api/google_flights/oneway/v1` et `/roundtrip/v1`. Clé `RAPIDAPI_KEY` dans `.env`.
+- **`main.py`** : `DuffelProvider` → `RapidAPIFlightsProvider`. Duffel reste actif pour les hôtels uniquement (`DuffelStaysProvider` inchangé).
+- **`.env.example`** : ajout de `RAPIDAPI_KEY`, clarification que Duffel est hôtels uniquement.
+- **`tests/test_search_core.py`** : patches mis à jour de `DuffelProvider` → `RapidAPIFlightsProvider`.
+
+### Added
+- **`tests/test_rapidapi_flights.py`** : 31 tests couvrant `_to_iata`, `_parse_description` (next-day, explicit +N, fallback), `_parse_one_way`, `_parse_roundtrip`, `_stable_id`, `search()` (tri par prix, max_results, flexible_days, erreur HTTP), et validation du payload (currency lowercase, passengers adults/children, max_stops, preferred_carriers, max_price, endpoints oneway/roundtrip).
+
 ## [0.3.7.0] - 2026-06-17
 
 ### Fixed
