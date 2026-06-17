@@ -128,7 +128,7 @@ def _parse_one_way(raw: dict, criteria: SearchCriteria, date: str) -> Normalized
         duration_minutes=duration_min,
     )
 
-    price = float(raw.get("price_as_number", raw.get("price", 0)) or 0)
+    price = float(raw.get("price", raw.get("price_as_number", 0)) or 0)
     return NormalizedFlight(
         provider="rapidapi_google_flights",
         offer_id=_stable_id(raw, date),
