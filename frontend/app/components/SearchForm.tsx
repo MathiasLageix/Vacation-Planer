@@ -134,7 +134,7 @@ export function SearchForm() {
       <Section title="Vols" icon="✈️">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <Label>Départ (IATA)</Label>
+            <Label>Aéroport de départ (ex : YUL)</Label>
             <Input
               placeholder="YUL"
               value={form.origin}
@@ -144,7 +144,7 @@ export function SearchForm() {
             />
           </div>
           <div>
-            <Label>Destination (IATA)</Label>
+            <Label>Aéroport d'arrivée (ex : CDG)</Label>
             <Input
               placeholder="CDG"
               value={form.destination}
@@ -234,7 +234,7 @@ export function SearchForm() {
           <div>
             <Label>Compagnies préférées (optionnel)</Label>
             <Input
-              placeholder="AC, AF (IATA, virgules)"
+              placeholder="ex : AC, AF"
               value={form.preferred_carriers}
               onChange={(e) => set("preferred_carriers", e.target.value)}
             />
@@ -256,7 +256,7 @@ export function SearchForm() {
         {form.include_hotel && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label>Code ville IATA</Label>
+              <Label>Ville de destination (ex : PAR)</Label>
               <Input
                 placeholder="PAR"
                 value={form.city_iata}
@@ -308,7 +308,7 @@ export function SearchForm() {
         {form.include_car && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label>Lieu de prise en charge (IATA)</Label>
+              <Label>Lieu de prise en charge (ex : CDG)</Label>
               <Input
                 placeholder={form.destination || "CDG"}
                 value={form.pickup_location}
@@ -317,7 +317,7 @@ export function SearchForm() {
               />
             </div>
             <div>
-              <Label>Lieu de retour (IATA)</Label>
+              <Label>Lieu de retour (ex : CDG)</Label>
               <Input
                 placeholder={form.pickup_location || "CDG"}
                 value={form.dropoff_location}
