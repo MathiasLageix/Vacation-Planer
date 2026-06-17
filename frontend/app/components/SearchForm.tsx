@@ -132,7 +132,7 @@ export function SearchForm() {
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Vols */}
       <Section title="Vols" icon="✈️">
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
             <Label>Départ (IATA)</Label>
             <Input
@@ -254,7 +254,7 @@ export function SearchForm() {
           <span className="text-sm text-slate-700">Inclure la recherche d'hébergement</span>
         </label>
         {form.include_hotel && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Code ville IATA</Label>
               <Input
@@ -306,7 +306,7 @@ export function SearchForm() {
           <span className="text-sm text-slate-700">Inclure la location de voiture</span>
         </label>
         {form.include_car && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Lieu de prise en charge (IATA)</Label>
               <Input
