@@ -96,4 +96,4 @@ Réponse : tableau comparatif + insights + deep links préremplis
 - [x] Insights de prix/dispo (`insights.py` — diff entre deux snapshots)
 - [x] Questionnaire étendu (vols + hôtels + autos optionnels)
 - [x] Recherches parallèles + affichage unifié (`main.py`)
-- [ ] Scheduler APScheduler (re-check périodique — Phase 2 restant)
+- [x] Scheduler APScheduler (`scheduler.py` — daemon + `--once` pour les tests, re-check toutes les N min)
