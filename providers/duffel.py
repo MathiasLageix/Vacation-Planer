@@ -1,4 +1,5 @@
 """Fournisseur Duffel pour la recherche de vols."""
+import asyncio
 import os
 from datetime import datetime, timedelta
 
@@ -143,10 +144,14 @@ class DuffelProvider:
         all_offers: list[NormalizedFlight] = []
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            for date in dates_to_search:
-                raw_offers = await self._create_offer_request(client, criteria, date)
-                parsed = [_parse_offer(o, criteria) for o in raw_offers]
-                all_offers.extend(parsed)
+            date_results = await asyncio.gather(
+                *[self._create_offer_request(client, criteria, date) for date in dates_to_search],
+                return_exceptions=True,
+            )
+            for raw_offers in date_results:
+                if isinstance(raw_offers, Exception):
+                    continue
+                all_offers.extend(_parse_offer(o, criteria) for o in raw_offers)
 
         if criteria.max_stops is not None:
             all_offers = [o for o in all_offers if o.stops <= criteria.max_stops]

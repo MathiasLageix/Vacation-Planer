@@ -36,7 +36,7 @@ export function HotelCard({ hotel, rank }: { hotel: Hotel; rank: number }) {
           Total : {hotel.total_price.toFixed(0)} {hotel.currency}
         </div>
         <a
-          href={hotel.deep_link}
+          href={hotel.deep_link?.startsWith("https://") ? hotel.deep_link : "#"}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors"

@@ -26,8 +26,8 @@ async def search(req: SearchRequest) -> StreamingResponse:
         flight_criteria = SearchCriteria(**req.flight.model_dump())
         hotel_criteria = HotelSearchCriteria(**req.hotel.model_dump()) if req.hotel else None
         car_criteria = CarSearchCriteria(**req.car.model_dump()) if req.car else None
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail={"code": "INVALID_INPUT", "message": str(exc)})
+    except Exception:
+        raise HTTPException(status_code=422, detail={"code": "INVALID_INPUT", "message": "Les données soumises sont invalides."})
 
     async def event_stream():
         yield _to_sse("status", {"message": "Recherche en cours…"})
@@ -41,7 +41,7 @@ async def search(req: SearchRequest) -> StreamingResponse:
         except asyncio.TimeoutError:
             yield _to_sse("error", {"message": "La recherche a pris trop de temps. Réessayez."})
             return
-        except Exception as exc:
+        except Exception:
             _log.exception("Erreur lors de la recherche")
             yield _to_sse("error", {"message": "Une erreur interne est survenue. Réessayez."})
             return

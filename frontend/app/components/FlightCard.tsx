@@ -62,7 +62,7 @@ export function FlightCard({ flight, rank }: { flight: Flight; rank: number }) {
           <span className="text-sm font-normal text-slate-500">{flight.currency}</span>
         </div>
         <a
-          href={flight.deep_link}
+          href={flight.deep_link?.startsWith("https://") ? flight.deep_link : "#"}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors"
