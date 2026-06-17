@@ -1,0 +1,40 @@
+{
+  "data": {
+    "results": [
+      {
+        "id": "stay_res_0001",
+        "accommodation": {
+          "id": "acc_0001",
+          "name": "Hôtel du Louvre",
+          "rating": { "value": 4 },
+          "location": {
+            "address": {
+              "line_one": "1 Place André Malraux",
+              "city_name": "Paris",
+              "country_code": "FR"
+            }
+          }
+        },
+        "cheapest_rate_total_amount": "900.00",
+        "cheapest_rate_currency": "USD"
+      },
+      {
+        "id": "stay_res_0002",
+        "accommodation": {
+          "id": "acc_0002",
+          "name": "Ibis Paris Gare du Nord",
+          "rating": { "value": 3 },
+          "location": {
+            "address": {
+              "line_one": "75 Rue de Maubeuge",
+              "city_name": "Paris",
+              "country_code": "FR"
+            }
+          }
+        },
+        "cheapest_rate_total_amount": "450.00",
+        "cheapest_rate_currency": "USD"
+      }
+    ]
+  }
+}

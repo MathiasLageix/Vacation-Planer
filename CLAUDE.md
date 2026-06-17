@@ -79,7 +79,7 @@ Réponse : tableau comparatif + insights + deep links préremplis
 
 - **Phase 1 (MVP)** : recherche de vols Amadeus, questionnaire de base, sortie en
   tableau avec deep links. Une recherche bout-en-bout qui marche.
-- **Phase 2** : ajout hôtels + autos, snapshots de dispo + insights, scheduler.
+- **Phase 2** : ajout hôtels + autos, snapshots de dispo + insights, scheduler. ✅ (sauf scheduler)
 - **Phase 3** : UI web, Airbnb/VRBO (scraping prudent), alertes de prix.
 
 ## État actuel
@@ -90,4 +90,10 @@ Réponse : tableau comparatif + insights + deep links préremplis
 - [x] `.env` configuré avec clé Duffel (`DUFFEL_API_KEY`) — Amadeus décommissionné 2026-07-17
 - [x] Premier appel `search_flights` Duffel qui retourne des résultats réels (5 vols YUL→CDG)
 - [x] Questionnaire de critères CLI
-- [ ] Stockage SQLite + snapshots (Phase 2)
+- [x] Hébergements : `providers/duffel_stays.py` (Duffel Stays API)
+- [x] Autos : stub `providers/cars.py` (aucune API dispo — Phase 3)
+- [x] Stockage SQLite + snapshots (`storage.py` — SQLAlchemy, sessions par hash de critères)
+- [x] Insights de prix/dispo (`insights.py` — diff entre deux snapshots)
+- [x] Questionnaire étendu (vols + hôtels + autos optionnels)
+- [x] Recherches parallèles + affichage unifié (`main.py`)
+- [ ] Scheduler APScheduler (re-check périodique — Phase 2 restant)
