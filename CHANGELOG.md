@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.3.5.0] - 2026-06-17
+
+### Fixed
+- **`frontend/.npmrc`** : `cache=false` → `cache=/tmp/npm` — rediriger le cache npm vers `/tmp` au lieu de le désactiver. `cache=false` causait `npm ci exit code 1` car `--prefer-offline` ne pouvait plus trouver de cache pour résoudre les paquets.
+- **`frontend/railway.toml`** : suppression de `--prefer-offline` — inutile et contradictoire avec un cache vide ; npm résout désormais normalement depuis le registry.
+
 ## [0.3.4.0] - 2026-06-17
 
 ### Fixed
