@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.3.3.0] - 2026-06-17
+
+### Added
+- **`frontend/.env.production`** : `API_URL=https://vacation-planer-production.up.railway.app` — le route handler Next.js lit cette variable à runtime pour proxifier `/api/*` vers le backend Railway. Non-secret (URL publique), commité volontairement.
+- **Instructions post-déploiement** dans `deploy.sh` : commande `railway variables --service backend set FRONTEND_URL=...` pour autoriser le CORS une fois l'URL du frontend Railway connue.
+
+### Changed
+- **`.gitignore`** : exception `!frontend/.env.production` — `.env.*` reste ignoré globalement, seul ce fichier non-secret est suivi.
+- **`.env.example`** : documentation clarifiée pour les variables Railway prod (`FRONTEND_URL` sur le backend, `API_URL` via `frontend/.env.production`).
+
 ## [0.3.2.0] - 2026-06-17
 
 ### Fixed
