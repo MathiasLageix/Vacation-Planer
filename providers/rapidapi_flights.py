@@ -9,11 +9,14 @@ Auth : x-rapidapi-key (RAPIDAPI_KEY dans .env), x-rapidapi-host.
 
 import asyncio
 import hashlib
+import logging
 import os
 import re
 from datetime import datetime, timedelta
 
 import httpx
+
+_log = logging.getLogger(__name__)
 
 from models import FlightSegment, NormalizedFlight, SearchCriteria
 
@@ -215,8 +218,18 @@ class RapidAPIFlightsProvider:
         url = f"{_BASE_URL}/api/google_flights/{path}/v1"
         payload = self._build_payload(criteria, departure_date)
 
-        resp = await client.post(url, json=payload, headers=self._headers)
-        resp.raise_for_status()
+        try:
+            resp = await client.post(url, json=payload, headers=self._headers)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            _log.error(
+                "RapidAPI HTTP %s pour %s → %s : %s",
+                exc.response.status_code,
+                departure_date,
+                url,
+                exc.response.text[:500],
+            )
+            raise
 
         data = resp.json()
         if isinstance(data, list):
@@ -225,6 +238,14 @@ class RapidAPIFlightsProvider:
             for key in ("results", "flights", "data", "offers"):
                 if key in data and isinstance(data[key], list):
                     return data[key]
+            _log.warning(
+                "RapidAPI structure inattendue pour %s — clés reçues : %s — body: %s",
+                departure_date,
+                list(data.keys()),
+                str(data)[:500],
+            )
+        else:
+            _log.warning("RapidAPI réponse non-dict/non-list : %s", type(data).__name__)
         return []
 
     async def search(
@@ -240,6 +261,7 @@ class RapidAPIFlightsProvider:
         is_roundtrip = bool(criteria.return_date)
         all_flights: list[NormalizedFlight] = []
 
+        errors: list[Exception] = []
         async with httpx.AsyncClient(timeout=30.0) as client:
             raw_results = await asyncio.gather(
                 *[self._search_date(client, criteria, d) for d in dates],
@@ -247,6 +269,7 @@ class RapidAPIFlightsProvider:
             )
             for raw_list, date in zip(raw_results, dates):
                 if isinstance(raw_list, Exception):
+                    errors.append(raw_list)
                     continue
                 for flight in raw_list:
                     nf = (
@@ -255,6 +278,11 @@ class RapidAPIFlightsProvider:
                         else _parse_one_way(flight, criteria, date)
                     )
                     all_flights.append(nf)
+
+        if errors and not all_flights:
+            # Toutes les dates ont échoué : on propage la première erreur pour que
+            # search_core() l'affiche dans flight_error au lieu de retourner []
+            raise errors[0]
 
         all_flights.sort(key=lambda f: f.total_price)
         return all_flights[:max_results]

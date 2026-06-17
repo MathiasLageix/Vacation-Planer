@@ -532,7 +532,8 @@ async def test_oneway_uses_oneway_endpoint(monkeypatch):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_http_error_returns_empty(monkeypatch):
+async def test_http_error_raises(monkeypatch):
+    """HTTP error se propage comme exception (visible dans flight_error) au lieu de [] silencieux."""
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
 
@@ -547,6 +548,5 @@ async def test_http_error_returns_empty(monkeypatch):
     client.__aexit__ = AsyncMock(return_value=False)
 
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
-        flights = await RapidAPIFlightsProvider().search(_criteria())
-
-    assert flights == []
+        with pytest.raises(httpx.HTTPStatusError):
+            await RapidAPIFlightsProvider().search(_criteria())
