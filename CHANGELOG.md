@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.3.7.0] - 2026-06-17
+
+### Fixed
+- **`frontend/nixpacks.toml`** : `cacheDirectories = ["/root/.npm"]` — Nixpacks (node.rs) ajoute automatiquement `node_modules/.cache` comme `--mount=type=cache` Docker BuildKit. Quand `npm ci` essaie de supprimer `node_modules`, Linux refuse `rmdir /app/node_modules/.cache` avec EBUSY car c'est un point de montage Docker actif. En overridant `cacheDirectories` pour ne garder que `/root/.npm`, Nixpacks ne crée plus ce mount et `npm ci` peut supprimer librement `node_modules`. `NPM_CONFIG_CACHE` ne corrigeait pas ce bug (contrôle le cache de tarballs npm, pas le cache mount Nixpacks).
+- **`frontend/.npmrc`** : suppression de `cache=/tmp/npm` — cohérent avec la suppression de `NPM_CONFIG_CACHE` ; npm utilise son default `/root/.npm` qui est désormais persisté via `cacheDirectories`.
+
+## [0.3.6.0] - 2026-06-17
+
+### Fixed
+- **`frontend/nixpacks.toml`** (nouveau) : configuration Nixpacks directe — `railway.toml` `buildCommand` est ignoré par Nixpacks qui génère son propre pipeline. `nixpacks.toml` est lu en premier par le builder et définit `NPM_CONFIG_CACHE=/tmp/npm-cache` avant tout appel npm, éliminant le `EBUSY: resource busy or locked, rmdir node_modules/.cache`.
+- **`frontend/railway.toml`** : suppression de `buildCommand` — la commande de build est désormais gérée exclusivement par `nixpacks.toml`.
+
 ## [0.3.5.0] - 2026-06-17
 
 ### Fixed

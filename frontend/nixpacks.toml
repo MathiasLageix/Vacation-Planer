@@ -1,0 +1,9 @@
+[phases.install]
+cmds = ["npm ci"]
+cacheDirectories = ["/root/.npm"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[variables]
+NEXT_TELEMETRY_DISABLED = "1"
