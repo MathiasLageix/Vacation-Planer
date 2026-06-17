@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from models import NormalizedFlight, SearchCriteria
+import providers.rapidapi_flights as rf_module
 
 
 # ---------------------------------------------------------------------------
@@ -50,9 +51,9 @@ def _raw_oneway(
     buy_link="https://www.google.com/travel/flights?tfs=foo",
 ) -> dict:
     return {
-        "from_airport": "YUL",
-        "to_airport": "CDG",
-        "price": "$650",
+        "origin": "YUL",
+        "destination": "CDG",
+        "price": price,
         "price_as_number": price,
         "airline": airline,
         "departure_description": dep_desc,
@@ -74,11 +75,9 @@ def _raw_roundtrip(
     buy_link="https://www.google.com/travel/flights?tfs=bar",
 ) -> dict:
     return {
-        "from_airport": "YUL",
-        "to_airport": "CDG",
-        "total_price": "$1200",
+        "origin": "YUL",
+        "destination": "CDG",
         "total_price_as_number": total_price,
-        "total_stops": dep_stops,
         "departure_flight_airline": dep_airline,
         "departure_flight_departure_description": dep_desc,
         "departure_flight_duration_seconds": dep_dur_sec,
@@ -96,10 +95,22 @@ def _mock_client(response_data: list) -> MagicMock:
     resp.json = MagicMock(return_value=response_data)
 
     client = AsyncMock()
-    client.post = AsyncMock(return_value=resp)
+    client.get = AsyncMock(return_value=resp)
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
     return client
+
+
+# ---------------------------------------------------------------------------
+# Cache fixture (autouse=True — applied to ALL tests in this file)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Vide le cache avant/après chaque test pour éviter la pollution inter-tests."""
+    rf_module._CACHE.clear()
+    yield
+    rf_module._CACHE.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +167,6 @@ def test_parse_description_next_day_inferred():
 def test_parse_description_invalid_falls_back():
     from providers.rapidapi_flights import _parse_description
     dep, arr = _parse_description("non-date garbage", "2026-09-15")
-    # Les deux tombent à midi
     assert dep.hour == 12
     assert arr.hour == 12
 
@@ -310,28 +320,33 @@ async def test_search_max_results_respected(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Payload envoyé à l'API
+# Params envoyés à l'API (GET query params)
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
-async def test_payload_currency_lowercase(monkeypatch):
-    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
-    from providers.rapidapi_flights import RapidAPIFlightsProvider
-
+def _make_param_capturing_client():
+    """Retourne (client, captured_list) où captured_list reçoit les params de chaque GET."""
     captured: list[dict] = []
     resp = MagicMock()
     resp.raise_for_status = MagicMock()
     resp.json = MagicMock(return_value=[])
 
-    async def fake_post(url, json=None, headers=None):
-        captured.append(json or {})
+    async def fake_get(url, params=None, headers=None):
+        captured.append(params or {})
         return resp
 
     client = AsyncMock()
-    client.post = AsyncMock(side_effect=fake_post)
+    client.get = AsyncMock(side_effect=fake_get)
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
+    return client, captured
 
+
+@pytest.mark.asyncio
+async def test_params_currency_lowercase(monkeypatch):
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    client, captured = _make_param_capturing_client()
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         await RapidAPIFlightsProvider().search(_criteria(currency="CAD"))
 
@@ -339,52 +354,27 @@ async def test_payload_currency_lowercase(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_payload_passengers_adults_children(monkeypatch):
+async def test_params_adults_children_as_ints(monkeypatch):
+    """Crawlio attend adults et children comme entiers, pas une liste passengers."""
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
 
-    captured: list[dict] = []
-    resp = MagicMock()
-    resp.raise_for_status = MagicMock()
-    resp.json = MagicMock(return_value=[])
-
-    async def fake_post(url, json=None, headers=None):
-        captured.append(json or {})
-        return resp
-
-    client = AsyncMock()
-    client.post = AsyncMock(side_effect=fake_post)
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
-
+    client, captured = _make_param_capturing_client()
     crit = _criteria(adults=2, children=1)
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         await RapidAPIFlightsProvider().search(crit)
 
-    passengers = captured[0]["passengers"]
-    assert passengers.count("adult") == 2
-    assert passengers.count("child") == 1
+    assert captured[0]["adults"] == 2
+    assert captured[0]["children"] == 1
+    assert "passengers" not in captured[0]
 
 
 @pytest.mark.asyncio
-async def test_payload_max_stops_included(monkeypatch):
+async def test_params_max_stops_included(monkeypatch):
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
 
-    captured: list[dict] = []
-    resp = MagicMock()
-    resp.raise_for_status = MagicMock()
-    resp.json = MagicMock(return_value=[])
-
-    async def fake_post(url, json=None, headers=None):
-        captured.append(json or {})
-        return resp
-
-    client = AsyncMock()
-    client.post = AsyncMock(side_effect=fake_post)
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
-
+    client, captured = _make_param_capturing_client()
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         await RapidAPIFlightsProvider().search(_criteria(max_stops=1))
 
@@ -392,53 +382,73 @@ async def test_payload_max_stops_included(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_payload_preferred_carriers(monkeypatch):
+async def test_params_seat_class_economy(monkeypatch):
+    """Crawlio utilise seat_class='economy' au lieu de seat_type=1."""
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
 
-    captured: list[dict] = []
-    resp = MagicMock()
-    resp.raise_for_status = MagicMock()
-    resp.json = MagicMock(return_value=[])
-
-    async def fake_post(url, json=None, headers=None):
-        captured.append(json or {})
-        return resp
-
-    client = AsyncMock()
-    client.post = AsyncMock(side_effect=fake_post)
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
-
+    client, captured = _make_param_capturing_client()
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
-        await RapidAPIFlightsProvider().search(_criteria(preferred_carriers=["AC", "WS"]))
+        await RapidAPIFlightsProvider().search(_criteria())
 
-    assert captured[0]["airline_codes"] == ["AC", "WS"]
+    assert captured[0]["seat_class"] == "economy"
+    assert "seat_type" not in captured[0]
 
 
 @pytest.mark.asyncio
-async def test_payload_max_price(monkeypatch):
+async def test_params_preferred_carriers_not_sent(monkeypatch):
+    """Crawlio ne supporte pas airline_codes — ne doit pas apparaître dans les params."""
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
 
-    captured: list[dict] = []
-    resp = MagicMock()
-    resp.raise_for_status = MagicMock()
-    resp.json = MagicMock(return_value=[])
+    client, captured = _make_param_capturing_client()
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        await RapidAPIFlightsProvider().search(_criteria(preferred_carriers=["AC", "WS"]))
 
-    async def fake_post(url, json=None, headers=None):
-        captured.append(json or {})
-        return resp
+    assert "airline_codes" not in captured[0]
 
-    client = AsyncMock()
-    client.post = AsyncMock(side_effect=fake_post)
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
 
+@pytest.mark.asyncio
+async def test_params_max_price_not_sent(monkeypatch):
+    """Crawlio ne supporte pas max_price — ne doit pas apparaître dans les params."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    client, captured = _make_param_capturing_client()
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         await RapidAPIFlightsProvider().search(_criteria(max_price=800.0))
 
-    assert captured[0]["max_price"] == 800
+    assert "max_price" not in captured[0]
+
+
+@pytest.mark.asyncio
+async def test_params_oneway_uses_date_key(monkeypatch):
+    """Aller simple → param 'date' (pas 'departure_date')."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    client, captured = _make_param_capturing_client()
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        await RapidAPIFlightsProvider().search(_criteria(departure_date="2026-09-15"))
+
+    assert captured[0]["date"] == "2026-09-15"
+    assert "departure_date" not in captured[0]
+
+
+@pytest.mark.asyncio
+async def test_params_roundtrip_uses_departure_date_key(monkeypatch):
+    """Aller-retour → params 'departure_date' + 'return_date'."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    client, captured = _make_param_capturing_client()
+    crit = _criteria(departure_date="2026-09-15", return_date="2026-09-22")
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        await RapidAPIFlightsProvider().search(crit)
+
+    assert captured[0]["departure_date"] == "2026-09-15"
+    assert captured[0]["return_date"] == "2026-09-22"
+    assert "date" not in captured[0]
 
 
 # ---------------------------------------------------------------------------
@@ -455,13 +465,13 @@ async def test_flexible_days_calls_multiple_dates(monkeypatch):
     resp.raise_for_status = MagicMock()
     resp.json = MagicMock(return_value=[])
 
-    async def fake_post(url, json=None, headers=None):
+    async def fake_get(url, params=None, headers=None):
         nonlocal call_count
         call_count += 1
         return resp
 
     client = AsyncMock()
-    client.post = AsyncMock(side_effect=fake_post)
+    client.get = AsyncMock(side_effect=fake_get)
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
 
@@ -473,7 +483,7 @@ async def test_flexible_days_calls_multiple_dates(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Round-trip : endpoint correct
+# Endpoints Crawlio corrects
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
@@ -486,12 +496,12 @@ async def test_roundtrip_uses_roundtrip_endpoint(monkeypatch):
     resp.raise_for_status = MagicMock()
     resp.json = MagicMock(return_value=[])
 
-    async def fake_post(url, json=None, headers=None):
+    async def fake_get(url, params=None, headers=None):
         urls_called.append(url)
         return resp
 
     client = AsyncMock()
-    client.post = AsyncMock(side_effect=fake_post)
+    client.get = AsyncMock(side_effect=fake_get)
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
 
@@ -499,11 +509,12 @@ async def test_roundtrip_uses_roundtrip_endpoint(monkeypatch):
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         await RapidAPIFlightsProvider().search(crit)
 
-    assert all("roundtrip" in u for u in urls_called)
+    assert all("/api/v1/roundtrip" in u for u in urls_called)
+    assert all("google-flights8.p.rapidapi.com" in u for u in urls_called)
 
 
 @pytest.mark.asyncio
-async def test_oneway_uses_oneway_endpoint(monkeypatch):
+async def test_oneway_uses_search_endpoint(monkeypatch):
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
 
@@ -512,23 +523,24 @@ async def test_oneway_uses_oneway_endpoint(monkeypatch):
     resp.raise_for_status = MagicMock()
     resp.json = MagicMock(return_value=[])
 
-    async def fake_post(url, json=None, headers=None):
+    async def fake_get(url, params=None, headers=None):
         urls_called.append(url)
         return resp
 
     client = AsyncMock()
-    client.post = AsyncMock(side_effect=fake_post)
+    client.get = AsyncMock(side_effect=fake_get)
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
 
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         await RapidAPIFlightsProvider().search(_criteria())
 
-    assert all("oneway" in u for u in urls_called)
+    assert all("/api/v1/search" in u for u in urls_called)
+    assert all("google-flights8.p.rapidapi.com" in u for u in urls_called)
 
 
 # ---------------------------------------------------------------------------
-# Erreur HTTP : silencieuse (exception absorbée)
+# Erreur HTTP : propagée (pas silencieuse)
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
@@ -543,10 +555,85 @@ async def test_http_error_raises(monkeypatch):
     ))
 
     client = AsyncMock()
-    client.post = AsyncMock(return_value=resp)
+    client.get = AsyncMock(return_value=resp)
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
 
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         with pytest.raises(httpx.HTTPStatusError):
             await RapidAPIFlightsProvider().search(_criteria())
+
+
+# ---------------------------------------------------------------------------
+# Cache TTL tests
+# ---------------------------------------------------------------------------
+
+def _make_client_mock(raw_flights: list[dict]):
+    resp = MagicMock()
+    resp.raise_for_status = MagicMock()
+    resp.json = MagicMock(return_value=raw_flights)
+    client = AsyncMock()
+    client.get = AsyncMock(return_value=resp)
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    return client
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_skips_api_call(monkeypatch, clear_cache):
+    """Le deuxième appel identique ne contacte pas l'API."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    raw = [{"price_as_number": 400, "airline": "Air Canada", "stops": 0,
+            "departure_description": "10:00 AM – 10:00 PM", "duration_seconds": 43200,
+            "buy_link": "https://example.com"}]
+    client = _make_client_mock(raw)
+
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        r1 = await RapidAPIFlightsProvider().search(_criteria())
+        r2 = await RapidAPIFlightsProvider().search(_criteria())
+
+    assert len(r1) == 1
+    assert r1 == r2
+    assert client.get.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_cache_expired_calls_api_again(monkeypatch, clear_cache):
+    """Après expiration du TTL, l'API est rappelée."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    raw = [{"price_as_number": 400, "airline": "Air Canada", "stops": 0,
+            "departure_description": "10:00 AM – 10:00 PM", "duration_seconds": 43200,
+            "buy_link": "https://example.com"}]
+    client = _make_client_mock(raw)
+
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        await RapidAPIFlightsProvider().search(_criteria())
+        for k in list(rf_module._CACHE):
+            expiry, val = rf_module._CACHE[k]
+            rf_module._CACHE[k] = (0.0, val)
+        await RapidAPIFlightsProvider().search(_criteria())
+
+    assert client.get.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_cache_different_criteria_different_entries(monkeypatch, clear_cache):
+    """Deux critères différents produisent deux entrées de cache distinctes."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    raw = [{"price_as_number": 400, "airline": "Air Canada", "stops": 0,
+            "departure_description": "10:00 AM – 10:00 PM", "duration_seconds": 43200,
+            "buy_link": "https://example.com"}]
+    client = _make_client_mock(raw)
+
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        await RapidAPIFlightsProvider().search(_criteria(departure_date="2026-09-15"))
+        await RapidAPIFlightsProvider().search(_criteria(departure_date="2026-10-01"))
+
+    assert client.get.call_count == 2
+    assert len(rf_module._CACHE) == 2

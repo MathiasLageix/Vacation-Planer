@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.4.2.0] - 2026-06-17
+
+### Changed
+- **`providers/rapidapi_flights.py`** : migration Matan Rabi → Crawlio (`google-flights8.p.rapidapi.com`). Méthode HTTP POST+JSON → GET+query params. Endpoints `/api/v1/search` (aller simple) et `/api/v1/roundtrip`. Paramètres adaptés : `origin`/`destination` au lieu de `from_airport`/`to_airport`, `adults`/`children` entiers au lieu de liste `passengers`, `seat_class="economy"` au lieu de `seat_type=1`, param `date` (oneway) / `departure_date`+`return_date` (roundtrip). Filtres `preferred_carriers` et `max_price` retirés (non supportés par Crawlio). Parsing adapté avec fallbacks pour les deux conventions de nommage.
+- **`tests/test_rapidapi_flights.py`** : tous les mocks `client.post` → `client.get`, assertions payload JSON → query params. Nouveaux tests : `test_params_seat_class_economy`, `test_params_preferred_carriers_not_sent`, `test_params_max_price_not_sent`, `test_params_oneway_uses_date_key`, `test_params_roundtrip_uses_departure_date_key`. `test_oneway_uses_oneway_endpoint` → `test_oneway_uses_search_endpoint` (endpoint `/api/v1/search`). Helper `_make_param_capturing_client()` mutualisé.
+
+## [0.4.1.0] - 2026-06-17
+
+### Added
+- **`providers/rapidapi_flights.py`** : cache mémoire TTL 1h pour les résultats de vols. Clé : hash MD5 de tous les critères (`origin`, `destination`, `departure_date`, `return_date`, `adults`, `children`, `currency`, `flexible_days`, `max_stops`, `preferred_carriers`, `max_price`, `max_results`). Max 100 entrées (LFU éviction sur expiry). Réduit les appels RapidAPI de 80-90% pour les recherches répétées, évitant les 429 sur le tier gratuit.
+- **`tests/test_rapidapi_flights.py`** : 3 nouveaux tests cache — `test_cache_hit_skips_api_call`, `test_cache_expired_calls_api_again`, `test_cache_different_criteria_different_entries`. Fixture `clear_cache` (`autouse=True`) vide le module-level `_CACHE` avant/après chaque test.
+
 ## [0.4.0.0] - 2026-06-17
 
 ### Changed
