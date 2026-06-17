@@ -97,3 +97,9 @@ Réponse : tableau comparatif + insights + deep links préremplis
 - [x] Questionnaire étendu (vols + hôtels + autos optionnels)
 - [x] Recherches parallèles + affichage unifié (`main.py`)
 - [x] Scheduler APScheduler (`scheduler.py` — daemon + `--once` pour les tests, re-check toutes les N min)
+- [x] Backend FastAPI (`api/` — POST /api/search SSE, GET /api/sessions, GET /api/health)
+- [x] Frontend Next.js 14 (`frontend/` — port 3001, TypeScript, Tailwind, formulaire multistep + page résultats SSE)
+- [x] `Makefile` — `make dev` lance api (:8000) + web (:3001) en parallèle
+- [ ] Alertes de prix (email/push — Phase 3 restant)
+- [ ] Airbnb/VRBO scraping (Phase 3 restant)
+- [ ] Postgres (Phase 3 restant)

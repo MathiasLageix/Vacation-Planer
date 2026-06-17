@@ -90,7 +90,7 @@ class DuffelStaysProvider:
             }
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 f"{_BASE_URL}/stays/search_results",
                 json=payload,
@@ -99,7 +99,13 @@ class DuffelStaysProvider:
             resp.raise_for_status()
             data = resp.json()
 
-        raw_results = data.get("data", {}).get("results", [])
+        print(f"[duffel_stays] status={resp.status_code} keys={list(data.keys())}")
+        data_node = data.get("data") or {}
+        if isinstance(data_node, list):
+            raw_results = data_node
+        else:
+            raw_results = data_node.get("results", [])
+        print(f"[duffel_stays] {len(raw_results)} résultats bruts")
         hotels = [_parse_result(r, criteria) for r in raw_results]
 
         if criteria.max_price_per_night is not None:

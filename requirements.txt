@@ -17,6 +17,10 @@ python-dotenv>=1.0.0
 # Confort dev
 rich>=13.0.0             # affichage CLI lisible (tableaux comparatifs)
 
+# API web (Phase 3)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
 # Outils dev (optionnels)
 ruff>=0.6.0
 black>=24.0.0

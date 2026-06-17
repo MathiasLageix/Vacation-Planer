@@ -29,11 +29,19 @@ def _build_deep_link(offer: dict, criteria: SearchCriteria) -> str:
     segs = slice_["segments"]
     origin = segs[0]["origin"]["iata_code"]
     destination = segs[-1]["destination"]["iata_code"]
-    dep_date = segs[0]["departing_at"][:10].replace("-", "")
-    trip_type = "r" if criteria.return_date else "o"
+    dep_date = segs[0]["departing_at"][:10]
+    carrier = segs[0]["marketing_carrier"]["iata_code"]
+
+    if criteria.return_date:
+        flt = f"{origin}.{destination}.{dep_date}*{destination}.{origin}.{criteria.return_date}"
+        trip_type = "r"
+    else:
+        flt = f"{origin}.{destination}.{dep_date}"
+        trip_type = "o"
+
     return (
-        f"https://www.google.com/travel/flights/search?"
-        f"#flt={origin}.{destination}.{dep_date};{trip_type};c:{criteria.currency}"
+        f"https://www.google.com/travel/flights"
+        f"#flt={flt};{trip_type};c:{criteria.currency};a:{carrier}"
     )
 
 
@@ -102,12 +110,14 @@ class DuffelProvider:
             )
 
         passengers = [{"type": "adult"} for _ in range(criteria.adults)]
+        passengers += [{"type": "child"} for _ in range(criteria.children)]
 
         payload = {
             "data": {
                 "slices": slices,
                 "passengers": passengers,
                 "cabin_class": "economy",
+                "currency": criteria.currency,
                 "return_offers": True,
             }
         }

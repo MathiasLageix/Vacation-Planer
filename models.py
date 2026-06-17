@@ -46,6 +46,7 @@ class SearchCriteria:
     departure_date: str
     return_date: Optional[str]
     adults: int = 1
+    children: int = 0
     max_stops: Optional[int] = None
     preferred_carriers: list[str] = field(default_factory=list)
     max_price: Optional[float] = None
