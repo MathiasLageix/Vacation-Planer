@@ -1,8 +1,9 @@
 """Route POST /api/search — SSE stream des résultats."""
 import asyncio
 import json
+import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from api.schemas import SearchRequest
@@ -11,6 +12,7 @@ from models import CarSearchCriteria, HotelSearchCriteria, SearchCriteria
 from storage import Storage
 
 router = APIRouter()
+_log = logging.getLogger(__name__)
 
 
 def _to_sse(event_type: str, data: dict | str) -> str:
@@ -20,9 +22,12 @@ def _to_sse(event_type: str, data: dict | str) -> str:
 
 @router.post("/search")
 async def search(req: SearchRequest) -> StreamingResponse:
-    flight_criteria = SearchCriteria(**req.flight.model_dump())
-    hotel_criteria = HotelSearchCriteria(**req.hotel.model_dump()) if req.hotel else None
-    car_criteria = CarSearchCriteria(**req.car.model_dump()) if req.car else None
+    try:
+        flight_criteria = SearchCriteria(**req.flight.model_dump())
+        hotel_criteria = HotelSearchCriteria(**req.hotel.model_dump()) if req.hotel else None
+        car_criteria = CarSearchCriteria(**req.car.model_dump()) if req.car else None
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail={"code": "INVALID_INPUT", "message": str(exc)})
 
     async def event_stream():
         yield _to_sse("status", {"message": "Recherche en cours…"})
@@ -37,11 +42,13 @@ async def search(req: SearchRequest) -> StreamingResponse:
             yield _to_sse("error", {"message": "La recherche a pris trop de temps. Réessayez."})
             return
         except Exception as exc:
-            yield _to_sse("error", {"message": str(exc)})
+            _log.exception("Erreur lors de la recherche")
+            yield _to_sse("error", {"message": "Une erreur interne est survenue. Réessayez."})
             return
 
         if result.get("flight_error"):
             yield _to_sse("error", {"message": result["flight_error"]})
+            return
 
         yield _to_sse("flights", {"data": result["flights"]})
         await asyncio.sleep(0)

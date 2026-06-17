@@ -48,7 +48,7 @@ export default function ResultsPage() {
       router.replace("/");
       return;
     }
-    if (sum) setSummary(JSON.parse(sum));
+    if (sum) { try { setSummary(JSON.parse(sum)); } catch { /* sessionStorage corrupt, use defaults */ } }
 
     let controller: AbortController | null = null;
 

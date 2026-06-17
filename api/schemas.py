@@ -13,7 +13,7 @@ class FlightCriteriaIn(BaseModel):
     preferred_carriers: list[str] = Field(default_factory=list)
     max_price: float | None = None
     currency: str = "CAD"
-    flexible_days: int = 0
+    flexible_days: int = Field(default=0, ge=0, le=5)
 
 
 class HotelCriteriaIn(BaseModel):
