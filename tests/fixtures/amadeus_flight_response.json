@@ -1,0 +1,50 @@
+{
+  "data": [
+    {
+      "id": "1",
+      "itineraries": [
+        {
+          "duration": "PT7H30M",
+          "segments": [
+            {
+              "departure": { "iataCode": "YUL", "at": "2026-08-15T08:00:00" },
+              "arrival":   { "iataCode": "CDG", "at": "2026-08-15T21:30:00" },
+              "carrierCode": "AC",
+              "number": "870",
+              "duration": "PT7H30M"
+            }
+          ]
+        }
+      ],
+      "price": { "grandTotal": "750.00", "currency": "CAD" },
+      "validatingAirlineCodes": ["AC"]
+    },
+    {
+      "id": "2",
+      "itineraries": [
+        {
+          "duration": "PT11H15M",
+          "segments": [
+            {
+              "departure": { "iataCode": "YUL", "at": "2026-08-15T06:00:00" },
+              "arrival":   { "iataCode": "JFK", "at": "2026-08-15T07:30:00" },
+              "carrierCode": "DL",
+              "number": "4421",
+              "duration": "PT1H30M"
+            },
+            {
+              "departure": { "iataCode": "JFK", "at": "2026-08-15T10:00:00" },
+              "arrival":   { "iataCode": "CDG", "at": "2026-08-15T23:15:00" },
+              "carrierCode": "DL",
+              "number": "8",
+              "duration": "PT8H15M"
+            }
+          ]
+        }
+      ],
+      "price": { "grandTotal": "620.00", "currency": "CAD" },
+      "validatingAirlineCodes": ["DL"]
+    }
+  ],
+  "meta": { "count": 2 }
+}

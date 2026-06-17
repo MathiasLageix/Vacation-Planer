@@ -1,0 +1,57 @@
+{
+  "data": {
+    "offers": [
+      {
+        "id": "off_0000AUde3KY1k4BD8yCXFN",
+        "total_amount": "750.00",
+        "total_currency": "CAD",
+        "slices": [
+          {
+            "duration": "PT7H30M",
+            "segments": [
+              {
+                "origin": { "iata_code": "YUL", "name": "Montréal-Trudeau" },
+                "destination": { "iata_code": "CDG", "name": "Paris-CDG" },
+                "departing_at": "2026-08-15T08:00:00",
+                "arriving_at": "2026-08-15T21:30:00",
+                "marketing_carrier": { "iata_code": "AC", "name": "Air Canada" },
+                "marketing_carrier_flight_number": "870",
+                "duration": "PT7H30M"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "off_0000AUde3KY1k4BD8yCXFO",
+        "total_amount": "620.00",
+        "total_currency": "CAD",
+        "slices": [
+          {
+            "duration": "PT11H15M",
+            "segments": [
+              {
+                "origin": { "iata_code": "YUL", "name": "Montréal-Trudeau" },
+                "destination": { "iata_code": "JFK", "name": "New York-JFK" },
+                "departing_at": "2026-08-15T06:00:00",
+                "arriving_at": "2026-08-15T07:30:00",
+                "marketing_carrier": { "iata_code": "DL", "name": "Delta" },
+                "marketing_carrier_flight_number": "4421",
+                "duration": "PT1H30M"
+              },
+              {
+                "origin": { "iata_code": "JFK", "name": "New York-JFK" },
+                "destination": { "iata_code": "CDG", "name": "Paris-CDG" },
+                "departing_at": "2026-08-15T10:00:00",
+                "arriving_at": "2026-08-15T23:15:00",
+                "marketing_carrier": { "iata_code": "DL", "name": "Delta" },
+                "marketing_carrier_flight_number": "8",
+                "duration": "PT8H15M"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

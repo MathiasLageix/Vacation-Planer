@@ -33,8 +33,8 @@ résultats bruts comme une recherche Google.
 | Langage           | Python 3.12                    | Orchestration API + async + SDK Anthropic natif |
 | Cerveau de l'agent| Anthropic SDK (tool use)       | Claude appelle lui-même les outils de recherche |
 | HTTP              | httpx (async)                  | Appels parallèles aux fournisseurs |
-| Vols              | Amadeus Self-Service (+ Duffel)| Filtrage compagnie / escales / dates |
-| Hôtels + autos    | Amadeus Self-Service           | Une seule source pour démarrer |
+| Vols              | Duffel                         | Amadeus décommissionné 2026-07-17 |
+| Hôtels + autos    | À déterminer (Amadeus hors jeu)| Duffel couvre aussi hôtels/autos |
 | Stockage          | SQLite → Postgres plus tard    | Snapshots de dispo pour les insights |
 | Scheduler         | APScheduler                    | Re-check périodique des dispos |
 | Secrets           | python-dotenv (.env)           | Clés API hors du code |
@@ -86,8 +86,8 @@ Réponse : tableau comparatif + insights + deep links préremplis
 
 > ⚠️ Mettre cette section à jour à chaque session.
 
-- [ ] Repo scaffoldé
-- [ ] `.env` configuré avec clés Amadeus
-- [ ] Premier appel `search_flights` qui retourne des résultats réels
-- [ ] Questionnaire de critères
-- [ ] Stockage SQLite + snapshots
+- [x] Repo scaffoldé (`models.py`, `providers/duffel.py`, `questionnaire.py`, `display.py`, `main.py`)
+- [x] `.env` configuré avec clé Duffel (`DUFFEL_API_KEY`) — Amadeus décommissionné 2026-07-17
+- [x] Premier appel `search_flights` Duffel qui retourne des résultats réels (5 vols YUL→CDG)
+- [x] Questionnaire de critères CLI
+- [ ] Stockage SQLite + snapshots (Phase 2)
