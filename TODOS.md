@@ -52,6 +52,14 @@ Les snapshots s'accumulent indéfiniment dans SQLite. Ajouter une purge automati
 **Priority:** P3
 Pas de framework de test JS en place. Ajouter Vitest ou Jest + React Testing Library pour couvrir les composants critiques (`SearchForm`, `FlightCard`, lecture SSE).
 
+### Formulaire : options avancées masquées
+**Priority:** P3
+9 champs visibles d'emblée dans la section Vols. La majorité des utilisateurs n'ont besoin que de 4 champs (aéroport départ/arrivée, date, adultes). Masquer Escales max / Flexibilité / Compagnies préférées derrière un accordion "Options avancées".
+
+### Sélecteur de date localisé
+**Priority:** P3
+Le champ `type="date"` natif affiche "mm/dd/yyyy" (format américain). Les utilisateurs francophones attendent jj/mm/aaaa. Remplacer par `react-day-picker` ou équivalent.
+
 ### Variables d'environnement pour CORS et URL backend
 **Priority:** P3
 CORS origin (`http://localhost:3001`) et URL backend Next.js (`http://localhost:8000`) sont en dur dans le code. Externaliser dans `.env` pour les déploiements non-locaux.
