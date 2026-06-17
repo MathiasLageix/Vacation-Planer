@@ -244,12 +244,12 @@ export function SearchForm() {
 
       {/* Hébergement */}
       <Section title="Hébergement" icon="🏨">
-        <label className="flex items-center gap-2 cursor-pointer mb-4">
+        <label className="flex items-center gap-3 cursor-pointer mb-4 min-h-[44px]">
           <input
             type="checkbox"
             checked={form.include_hotel}
             onChange={(e) => set("include_hotel", e.target.checked)}
-            className="rounded"
+            className="rounded w-5 h-5 shrink-0 accent-indigo-600"
           />
           <span className="text-sm text-slate-700">Inclure la recherche d'hébergement</span>
         </label>
@@ -296,12 +296,12 @@ export function SearchForm() {
 
       {/* Autos */}
       <Section title="Location de voiture" icon="🚗">
-        <label className="flex items-center gap-2 cursor-pointer mb-4">
+        <label className="flex items-center gap-3 cursor-pointer mb-4 min-h-[44px]">
           <input
             type="checkbox"
             checked={form.include_car}
             onChange={(e) => set("include_car", e.target.checked)}
-            className="rounded"
+            className="rounded w-5 h-5 shrink-0 accent-indigo-600"
           />
           <span className="text-sm text-slate-700">Inclure la location de voiture</span>
         </label>
