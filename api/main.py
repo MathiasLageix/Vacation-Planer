@@ -12,7 +12,7 @@ app = FastAPI(title="Vacation Planer API", version="0.1.0")
 # FRONTEND_URL : "http://localhost:3001" en dev, URL Railway en prod
 # Plusieurs origines séparées par des virgules sont supportées.
 _raw = os.environ.get("FRONTEND_URL", "http://localhost:3001")
-_allowed_origins = [o.strip() for o in _raw.split(",") if o.strip()]
+_allowed_origins = [o.strip() for o in _raw.split(",") if o.strip()] or ["http://localhost:3001"]
 
 app.add_middleware(
     CORSMiddleware,
