@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.3.6.0] - 2026-06-17
+
+### Fixed
+- **`frontend/nixpacks.toml`** (nouveau) : configuration Nixpacks directe — `railway.toml` `buildCommand` est ignoré par Nixpacks qui génère son propre pipeline. `nixpacks.toml` est lu en premier par le builder et définit `NPM_CONFIG_CACHE=/tmp/npm-cache` avant tout appel npm, éliminant le `EBUSY: resource busy or locked, rmdir node_modules/.cache`.
+- **`frontend/railway.toml`** : suppression de `buildCommand` — la commande de build est désormais gérée exclusivement par `nixpacks.toml`.
+
 ## [0.3.5.0] - 2026-06-17
 
 ### Fixed
