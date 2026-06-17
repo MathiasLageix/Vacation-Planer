@@ -354,7 +354,7 @@ export function SearchForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl text-base transition-colors"
+        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 outline-none"
       >
         {loading ? "Préparation…" : "Rechercher ✈️"}
       </button>
