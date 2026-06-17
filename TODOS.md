@@ -80,5 +80,5 @@ Snapshots horodatés via SQLAlchemy + couche d'insights (diff prix/dispo entre s
 
 ### Scheduler APScheduler (Phase 2)
 **Priority:** P1
-**Completed:** v0.1.0.0 (2026-06-16)
+**Completed:** v0.3.0.0 (2026-06-16)
 Daemon de re-check périodique via APScheduler — relance les recherches sauvegardées, génère des insights automatiquement.
