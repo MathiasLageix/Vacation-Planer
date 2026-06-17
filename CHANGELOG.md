@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.4.1.0] - 2026-06-17
+
+### Added
+- **`providers/rapidapi_flights.py`** : cache mémoire TTL 1h pour les résultats de vols. Clé : hash MD5 de tous les critères (`origin`, `destination`, `departure_date`, `return_date`, `adults`, `children`, `currency`, `flexible_days`, `max_stops`, `preferred_carriers`, `max_price`, `max_results`). Max 100 entrées (LFU éviction sur expiry). Réduit les appels RapidAPI de 80-90% pour les recherches répétées, évitant les 429 sur le tier gratuit.
+- **`tests/test_rapidapi_flights.py`** : 3 nouveaux tests cache — `test_cache_hit_skips_api_call`, `test_cache_expired_calls_api_again`, `test_cache_different_criteria_different_entries`. Fixture `clear_cache` (`autouse=True`) vide le module-level `_CACHE` avant/après chaque test.
+
 ## [0.4.0.0] - 2026-06-17
 
 ### Changed

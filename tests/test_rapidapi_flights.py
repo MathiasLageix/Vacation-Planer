@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from models import NormalizedFlight, SearchCriteria
+import providers.rapidapi_flights as rf_module
 
 
 # ---------------------------------------------------------------------------
@@ -550,3 +551,88 @@ async def test_http_error_raises(monkeypatch):
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         with pytest.raises(httpx.HTTPStatusError):
             await RapidAPIFlightsProvider().search(_criteria())
+
+
+# ---------------------------------------------------------------------------
+# Cache TTL tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Vide le cache avant/après chaque test pour éviter la pollution inter-tests."""
+    rf_module._CACHE.clear()
+    yield
+    rf_module._CACHE.clear()
+
+
+def _make_client_mock(raw_flights: list[dict]):
+    resp = MagicMock()
+    resp.raise_for_status = MagicMock()
+    resp.json = MagicMock(return_value=raw_flights)
+    client = AsyncMock()
+    client.post = AsyncMock(return_value=resp)
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    return client
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_skips_api_call(monkeypatch, clear_cache):
+    """Le deuxième appel identique ne contacte pas l'API."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    raw = [{"price_as_number": 400, "airline": "Air Canada", "stops": 0,
+            "departure_description": "10:00 AM – 10:00 PM", "duration_seconds": 43200,
+            "buy_link": "https://example.com"}]
+    client = _make_client_mock(raw)
+
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        r1 = await RapidAPIFlightsProvider().search(_criteria())
+        r2 = await RapidAPIFlightsProvider().search(_criteria())
+
+    assert len(r1) == 1
+    assert r1 == r2
+    # Le mock n'a été appelé qu'une seule fois malgré deux searches
+    assert client.post.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_cache_expired_calls_api_again(monkeypatch, clear_cache):
+    """Après expiration du TTL, l'API est rappelée."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    raw = [{"price_as_number": 400, "airline": "Air Canada", "stops": 0,
+            "departure_description": "10:00 AM – 10:00 PM", "duration_seconds": 43200,
+            "buy_link": "https://example.com"}]
+    client = _make_client_mock(raw)
+
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        await RapidAPIFlightsProvider().search(_criteria())
+        # Simule expiration du cache
+        for k in list(rf_module._CACHE):
+            expiry, val = rf_module._CACHE[k]
+            rf_module._CACHE[k] = (0.0, val)  # force expiry dans le passé
+        await RapidAPIFlightsProvider().search(_criteria())
+
+    assert client.post.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_cache_different_criteria_different_entries(monkeypatch, clear_cache):
+    """Deux critères différents produisent deux entrées de cache distinctes."""
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
+    from providers.rapidapi_flights import RapidAPIFlightsProvider
+
+    raw = [{"price_as_number": 400, "airline": "Air Canada", "stops": 0,
+            "departure_description": "10:00 AM – 10:00 PM", "duration_seconds": 43200,
+            "buy_link": "https://example.com"}]
+    client = _make_client_mock(raw)
+
+    with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
+        await RapidAPIFlightsProvider().search(_criteria(departure_date="2026-09-15"))
+        await RapidAPIFlightsProvider().search(_criteria(departure_date="2026-10-01"))
+
+    assert client.post.call_count == 2
+    assert len(rf_module._CACHE) == 2

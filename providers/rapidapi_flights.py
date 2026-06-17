@@ -12,11 +12,16 @@ import hashlib
 import logging
 import os
 import re
+import time
 from datetime import datetime, timedelta
 
 import httpx
 
 _log = logging.getLogger(__name__)
+
+_CACHE_TTL = 3600  # 1 heure
+_CACHE_MAX = 100   # entrées max (pour limiter la mémoire)
+_CACHE: dict[str, tuple[float, list]] = {}  # key → (expiry_ts, résultats)
 
 from models import FlightSegment, NormalizedFlight, SearchCriteria
 
@@ -180,6 +185,25 @@ def _parse_roundtrip(raw: dict, criteria: SearchCriteria) -> NormalizedFlight:
     )
 
 
+def _cache_key(criteria: SearchCriteria, max_results: int) -> str:
+    """Clé de cache stable pour une combinaison critères + max_results."""
+    parts = [
+        criteria.origin,
+        criteria.destination,
+        criteria.departure_date,
+        criteria.return_date or "",
+        str(criteria.adults),
+        str(criteria.children),
+        criteria.currency.lower(),
+        str(criteria.flexible_days),
+        str(criteria.max_stops),
+        ",".join(sorted(criteria.preferred_carriers)),
+        str(criteria.max_price),
+        str(max_results),
+    ]
+    return hashlib.md5("|".join(parts).encode()).hexdigest()
+
+
 class RapidAPIFlightsProvider:
     def __init__(self) -> None:
         self.api_key = os.environ["RAPIDAPI_KEY"]
@@ -251,6 +275,15 @@ class RapidAPIFlightsProvider:
     async def search(
         self, criteria: SearchCriteria, max_results: int = 10
     ) -> list[NormalizedFlight]:
+        key = _cache_key(criteria, max_results)
+        now = time.time()
+        if key in _CACHE:
+            expiry, cached = _CACHE[key]
+            if now < expiry:
+                _log.debug("Cache hit pour %s→%s %s", criteria.origin, criteria.destination, criteria.departure_date)
+                return cached
+            del _CACHE[key]
+
         dates = [criteria.departure_date]
         if criteria.flexible_days > 0:
             base = datetime.strptime(criteria.departure_date, "%Y-%m-%d")
@@ -285,4 +318,11 @@ class RapidAPIFlightsProvider:
             raise errors[0]
 
         all_flights.sort(key=lambda f: f.total_price)
-        return all_flights[:max_results]
+        result = all_flights[:max_results]
+
+        if len(_CACHE) >= _CACHE_MAX:
+            oldest_key = min(_CACHE, key=lambda k: _CACHE[k][0])
+            del _CACHE[oldest_key]
+        _CACHE[key] = (now + _CACHE_TTL, result)
+
+        return result
