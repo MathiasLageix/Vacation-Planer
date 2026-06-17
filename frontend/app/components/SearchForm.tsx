@@ -44,12 +44,10 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; icon?: string; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6">
-      <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-        <span>{icon}</span> {title}
-      </h2>
+      <h2 className="text-base font-semibold text-slate-800 mb-4">{title}</h2>
       {children}
     </div>
   );
@@ -356,7 +354,7 @@ export function SearchForm() {
         disabled={loading}
         className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 outline-none"
       >
-        {loading ? "Préparation…" : "Rechercher ✈️"}
+        {loading ? "Préparation…" : "Rechercher"}
       </button>
     </form>
   );

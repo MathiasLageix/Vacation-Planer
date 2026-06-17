@@ -7,7 +7,7 @@ export function InsightsSection({ insights, title }: { insights: Insights; title
 
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
-      <div className="text-sm font-semibold text-amber-800 mb-3">📊 Insights {title}</div>
+      <div className="text-sm font-semibold text-amber-800 mb-3">Insights {title}</div>
       <div className="flex flex-wrap gap-2">
         {insights.price_changes.map((p) => (
           <span

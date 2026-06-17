@@ -20,12 +20,10 @@ function Spinner() {
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; icon?: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
-        <span>{icon}</span> {title}
-      </h2>
+      <h2 className="text-lg font-semibold text-slate-800 mb-3">{title}</h2>
       {children}
     </div>
   );
@@ -201,7 +199,9 @@ export default function ResultsPage() {
       {/* Aucun résultat */}
       {status === "done" && flights.length === 0 && hotels.length === 0 && (
         <div className="text-center py-16 text-slate-400">
-          <div className="text-5xl mb-4">🔍</div>
+          <svg className="mx-auto mb-4 w-12 h-12 text-slate-300" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803a7.5 7.5 0 0 0 10.607 0Z" />
+          </svg>
           <p className="text-lg font-medium text-slate-600">Aucun résultat trouvé</p>
           <p className="text-sm mt-1">Essayez d'élargir vos critères (dates, budget, escales).</p>
         </div>
