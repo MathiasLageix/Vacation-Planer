@@ -1,10 +1,13 @@
-"""Fournisseur RapidAPI Google Flights Live (by Matan Rabi) pour la recherche de vols.
+"""Fournisseur RapidAPI Google Flights Live (by Crawlio) pour la recherche de vols.
 
-Endpoint : https://google-flights-live-api.p.rapidapi.com
-  POST /api/google_flights/oneway/v1   — vols aller simple
-  POST /api/google_flights/roundtrip/v1 — vols aller-retour
+Endpoint : https://google-flights8.p.rapidapi.com
+  GET /api/v1/search    — vols aller simple
+  GET /api/v1/roundtrip — vols aller-retour
 
 Auth : x-rapidapi-key (RAPIDAPI_KEY dans .env), x-rapidapi-host.
+Méthode : GET avec query params (pas de body JSON).
+
+Filtres non supportés par Crawlio : preferred_carriers, max_price.
 """
 
 import asyncio
@@ -25,8 +28,8 @@ _CACHE: dict[str, tuple[float, list]] = {}  # key → (expiry_ts, résultats)
 
 from models import FlightSegment, NormalizedFlight, SearchCriteria
 
-_BASE_URL = "https://google-flights-live-api.p.rapidapi.com"
-_RAPIDAPI_HOST = "google-flights-live-api.p.rapidapi.com"
+_BASE_URL = "https://google-flights8.p.rapidapi.com"
+_RAPIDAPI_HOST = "google-flights8.p.rapidapi.com"
 
 # Compagnies les plus fréquentes sur les routes CA/Europe — complétable librement.
 _AIRLINE_IATA: dict[str, str] = {
@@ -95,11 +98,11 @@ def _parse_description(description: str, base_date: str) -> tuple[datetime, date
 def _stable_id(flight: dict, date: str) -> str:
     """Génère un ID stable et court depuis les champs discriminants du vol."""
     key = "|".join([
-        str(flight.get("from_airport", "")),
-        str(flight.get("to_airport", "")),
+        str(flight.get("origin", flight.get("from_airport", ""))),
+        str(flight.get("destination", flight.get("to_airport", ""))),
         date,
         str(flight.get("airline", flight.get("departure_flight_airline", ""))),
-        str(flight.get("price_as_number", flight.get("total_price_as_number", ""))),
+        str(flight.get("price", flight.get("price_as_number", flight.get("total_price_as_number", "")))),
     ])
     return hashlib.md5(key.encode()).hexdigest()[:16]
 
@@ -111,8 +114,9 @@ def _safe_link(url: str) -> str:
 
 def _parse_one_way(raw: dict, criteria: SearchCriteria, date: str) -> NormalizedFlight:
     carrier_code = _to_iata(raw.get("airline", ""))
-    dep_dt, arr_dt = _parse_description(raw.get("departure_description", ""), date)
-    duration_min = (raw.get("duration_seconds") or 0) // 60
+    dep_str = raw.get("departure_description", raw.get("departure_time", ""))
+    dep_dt, arr_dt = _parse_description(dep_str, date)
+    duration_min = (raw.get("duration_seconds", raw.get("duration", 0)) or 0) // 60
 
     segment = FlightSegment(
         origin=criteria.origin,
@@ -124,33 +128,38 @@ def _parse_one_way(raw: dict, criteria: SearchCriteria, date: str) -> Normalized
         duration_minutes=duration_min,
     )
 
+    price = float(raw.get("price_as_number", raw.get("price", 0)) or 0)
     return NormalizedFlight(
         provider="rapidapi_google_flights",
         offer_id=_stable_id(raw, date),
-        total_price=float(raw.get("price_as_number", 0)),
+        total_price=price,
         currency=criteria.currency.upper(),
         stops=int(raw.get("stops", 0)),
         segments=[segment],
-        deep_link=_safe_link(raw.get("buy_link", "")),
+        deep_link=_safe_link(raw.get("buy_link", raw.get("booking_link", ""))),
         raw=raw,
     )
 
 
 def _parse_roundtrip(raw: dict, criteria: SearchCriteria) -> NormalizedFlight:
-    dep_carrier = _to_iata(raw.get("departure_flight_airline", ""))
-    ret_carrier = _to_iata(raw.get("return_flight_airline", ""))
+    dep_carrier = _to_iata(raw.get("departure_flight_airline", raw.get("airline", "")))
+    ret_carrier = _to_iata(raw.get("return_flight_airline", raw.get("return_airline", "")))
 
-    dep_dt, dep_arr_dt = _parse_description(
-        raw.get("departure_flight_departure_description", ""),
-        criteria.departure_date,
-    )
+    dep_str = raw.get("departure_flight_departure_description",
+                       raw.get("departure_description", raw.get("departure_time", "")))
+    ret_str = raw.get("return_flight_departure_description",
+                       raw.get("return_description", raw.get("return_time", "")))
+
+    dep_dt, dep_arr_dt = _parse_description(dep_str, criteria.departure_date)
     ret_dt, ret_arr_dt = _parse_description(
-        raw.get("return_flight_departure_description", ""),
+        ret_str,
         criteria.return_date or criteria.departure_date,
     )
 
-    dep_min = (raw.get("departure_flight_duration_seconds") or 0) // 60
-    ret_min = (raw.get("return_flight_duration_seconds") or 0) // 60
+    dep_min = (raw.get("departure_flight_duration_seconds",
+                        raw.get("departure_duration", 0)) or 0) // 60
+    ret_min = (raw.get("return_flight_duration_seconds",
+                        raw.get("return_duration", 0)) or 0) // 60
 
     segments = [
         FlightSegment(
@@ -173,14 +182,15 @@ def _parse_roundtrip(raw: dict, criteria: SearchCriteria) -> NormalizedFlight:
         ),
     ]
 
+    price = float(raw.get("total_price_as_number", raw.get("price", 0)) or 0)
     return NormalizedFlight(
         provider="rapidapi_google_flights",
         offer_id=_stable_id(raw, criteria.departure_date),
-        total_price=float(raw.get("total_price_as_number", 0)),
+        total_price=price,
         currency=criteria.currency.upper(),
-        stops=int(raw.get("departure_flight_stops") or 0),
+        stops=int(raw.get("departure_flight_stops", raw.get("stops", 0)) or 0),
         segments=segments,
-        deep_link=_safe_link(raw.get("buy_link", "")),
+        deep_link=_safe_link(raw.get("buy_link", raw.get("booking_link", ""))),
         raw=raw,
     )
 
@@ -208,29 +218,31 @@ class RapidAPIFlightsProvider:
     def __init__(self) -> None:
         self.api_key = os.environ["RAPIDAPI_KEY"]
         self._headers = {
-            "Content-Type": "application/json",
             "x-rapidapi-host": _RAPIDAPI_HOST,
             "x-rapidapi-key": self.api_key,
         }
 
-    def _build_payload(self, criteria: SearchCriteria, departure_date: str) -> dict:
-        payload: dict = {
-            "from_airport": criteria.origin,
-            "to_airport": criteria.destination,
-            "departure_date": departure_date,
+    def _build_params(self, criteria: SearchCriteria, departure_date: str) -> dict:
+        params: dict = {
+            "origin": criteria.origin,
+            "destination": criteria.destination,
+            "adults": criteria.adults,
+            "children": criteria.children,
+            "infants_on_lap": 0,
+            "infants_in_seat": 0,
+            "seat_class": "economy",
             "currency": criteria.currency.lower(),
-            "passengers": ["adult"] * criteria.adults + ["child"] * criteria.children,
-            "seat_type": 1,  # 1 = Economy
+            "sort_by": "price",
         }
         if criteria.return_date:
-            payload["return_date"] = criteria.return_date
+            params["departure_date"] = departure_date
+            params["return_date"] = criteria.return_date
+        else:
+            params["date"] = departure_date
         if criteria.max_stops is not None:
-            payload["max_stops"] = criteria.max_stops
-        if criteria.preferred_carriers:
-            payload["airline_codes"] = criteria.preferred_carriers
-        if criteria.max_price is not None:
-            payload["max_price"] = int(criteria.max_price)
-        return payload
+            params["max_stops"] = criteria.max_stops
+        # preferred_carriers and max_price not supported by Crawlio
+        return params
 
     async def _search_date(
         self,
@@ -238,12 +250,12 @@ class RapidAPIFlightsProvider:
         criteria: SearchCriteria,
         departure_date: str,
     ) -> list[dict]:
-        path = "roundtrip" if criteria.return_date else "oneway"
-        url = f"{_BASE_URL}/api/google_flights/{path}/v1"
-        payload = self._build_payload(criteria, departure_date)
+        path = "roundtrip" if criteria.return_date else "search"
+        url = f"{_BASE_URL}/api/v1/{path}"
+        params = self._build_params(criteria, departure_date)
 
         try:
-            resp = await client.post(url, json=payload, headers=self._headers)
+            resp = await client.get(url, params=params, headers=self._headers)
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
             _log.error(
