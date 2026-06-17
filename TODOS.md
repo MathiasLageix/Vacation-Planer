@@ -62,7 +62,24 @@ Le champ `type="date"` natif affiche "mm/dd/yyyy" (format américain). Les utili
 
 ### Variables d'environnement pour CORS et URL backend
 **Priority:** P3
-CORS origin (`http://localhost:3001`) et URL backend Next.js (`http://localhost:8000`) sont en dur dans le code. Externaliser dans `.env` pour les déploiements non-locaux.
+~~CORS origin (`http://localhost:3001`) et URL backend Next.js (`http://localhost:8000`) sont en dur dans le code. Externaliser dans `.env` pour les déploiements non-locaux.~~
+**Completed:** v0.3.1.0 (2026-06-17) — CORS lit `FRONTEND_URL`, proxy via route handler lit `API_URL` à runtime.
+
+### Storage : lire DATABASE_URL depuis l'environnement
+**Priority:** P2
+`Storage()` est toujours appelé sans argument — ignore la variable `DATABASE_URL` du `.env`. Sur Railway, le filesystem SQLite est éphémère : toutes les sessions et snapshots sont perdus à chaque redémarrage. Faire lire `DATABASE_URL` depuis `os.environ` dans le constructeur `Storage.__init__`.
+
+### Authentification sur GET /api/sessions
+**Priority:** P2
+`GET /api/sessions` retourne les critères de toutes les recherches sans authentification ni filtrage. N'importe qui peut énumérer les destinations, dates et budgets de tous les utilisateurs. Ajouter une clé API ou limiter à la session courante.
+
+### Déconnexion SSE : annuler les appels Duffel orphelins
+**Priority:** P3
+Si le navigateur navigue pendant une recherche SSE, `search_core` continue d'exécuter les appels httpx Duffel jusqu'à leur timeout. Sur Railway avec un seul worker, cela bloque la boucle d'événements 30 secondes. Ajouter une vérification de déconnexion (`request.is_disconnected()`) dans le générateur `event_stream()`.
+
+### SSE : erreur vols ne doit pas éliminer les hôtels trouvés
+**Priority:** P3
+Si les vols échouent mais les hôtels réussissent, le handler SSE retourne immédiatement après l'erreur vols sans envoyer les résultats hôtels déjà fetchés. Le CLI fait l'inverse (continue). Émettre l'erreur vol comme `warning` SSE et continuer à envoyer hôtels + insights + done.
 
 ## Completed
 

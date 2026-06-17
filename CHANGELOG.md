@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.3.1.0] - 2026-06-17
+
+### Added
+- **Déploiement Railway** : `railway.toml` pour le backend FastAPI et `frontend/railway.toml` pour le frontend Next.js (Nixpacks builder, healthcheck, restart policy)
+- **Script `deploy.sh`** : déploie backend et/ou frontend via `railway up --service` avec `set -euo pipefail`
+- **`make install`** / **`make start-api`** / **`make start-web`** : cibles production pour Railway
+
+### Fixed
+- **Proxy API runtime** : l'URL du backend (`API_URL`) était évaluée au moment du build Next.js (baked dans `routes-manifest.json`) — remplacée par un route handler App Router (`app/api/[...path]/route.ts`) qui lit l'env var à chaque requête, rendant le proxy fonctionnel sur Railway
+- **CORS fallback** : si `FRONTEND_URL` est une chaîne vide, `_allowed_origins` restait `[]` et bloquait toutes les requêtes browser — ajout d'un fallback `or ["http://localhost:3001"]`
+- **PORT fallback** dans `railway.toml` : `$PORT` → `${PORT:-8000}` pour cohérence avec le Makefile
+
+### Changed
+- **`frontend/next.config.mjs`** : suppression du rewrite `/api/*` (remplacé par le route handler, plus de build-time evaluation de `API_URL`)
+- **`frontend/package.json`** : `next start --port 3001` → `next start --port ${PORT:-3001}` (Railway injecte `$PORT`)
+- **`requirements.txt` + `pyproject.toml`** : suppression de `amadeus>=12.0.0` (décommissionné 2026-07-17, jamais utilisé)
+- **`.env.example`** : mise à jour pour refléter Duffel-only + variables Railway documentées
+
 ## [0.3.0.0] - 2026-06-16
 
 ### Added
