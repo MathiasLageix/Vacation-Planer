@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.3.2.0] - 2026-06-17
+
+### Fixed
+- **`Procfile`** : Nixpacks détecte `main.py` à la racine et génère automatiquement `uvicorn main:app` — qui échoue car `main.py` (CLI agent) n'a pas de variable `app`. Le `Procfile` est prioritaire sur l'auto-détection et pointe explicitement vers `api.main:app`
+
 ## [0.3.1.0] - 2026-06-17
 
 ### Added
