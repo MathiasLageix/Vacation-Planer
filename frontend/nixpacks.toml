@@ -1,9 +1,9 @@
 [phases.install]
 cmds = ["npm ci"]
+cacheDirectories = ["/root/.npm"]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [variables]
-NPM_CONFIG_CACHE = "/tmp/npm-cache"
 NEXT_TELEMETRY_DISABLED = "1"
