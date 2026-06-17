@@ -10,8 +10,8 @@ from display import print_cars, print_flights, print_hotels, print_insights
 from insights import compare_snapshots
 from models import CarSearchCriteria, HotelSearchCriteria, SearchCriteria
 from providers.cars import CarsProvider
-from providers.duffel import DuffelProvider
 from providers.duffel_stays import DuffelStaysProvider
+from providers.rapidapi_flights import RapidAPIFlightsProvider
 from questionnaire import run_questionnaire
 from storage import Storage
 
@@ -27,7 +27,7 @@ async def search_core(
 
     Utilisé par l'API FastAPI et par run_search() (CLI).
     """
-    flight_provider = DuffelProvider()
+    flight_provider = RapidAPIFlightsProvider()
     hotel_provider = DuffelStaysProvider()
     car_provider = CarsProvider()
 

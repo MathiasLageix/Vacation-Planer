@@ -16,7 +16,7 @@ from datetime import datetime
 
 @pytest.fixture(autouse=True)
 def mock_env(monkeypatch, tmp_path):
-    monkeypatch.setenv("DUFFEL_API_KEY", "duffel_test_fake")
+    monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     monkeypatch.setenv("DATABASE_URL", str(tmp_path / "test.db"))
 
 
@@ -71,11 +71,11 @@ async def test_search_core_flights_only():
     storage = Storage("sqlite:///:memory:")
 
     with (
-        patch("main.DuffelProvider") as mock_dp,
+        patch("main.RapidAPIFlightsProvider") as mock_fp,
         patch("main.DuffelStaysProvider"),
         patch("main.CarsProvider"),
     ):
-        mock_dp.return_value.search = AsyncMock(return_value=[flight])
+        mock_fp.return_value.search = AsyncMock(return_value=[flight])
         result = await search_core(criteria, None, None, storage)
 
     assert result["flight_error"] is None
@@ -99,11 +99,11 @@ async def test_search_core_flight_error_propagated():
     storage = Storage("sqlite:///:memory:")
 
     with (
-        patch("main.DuffelProvider") as mock_dp,
+        patch("main.RapidAPIFlightsProvider") as mock_fp,
         patch("main.DuffelStaysProvider"),
         patch("main.CarsProvider"),
     ):
-        mock_dp.return_value.search = AsyncMock(side_effect=RuntimeError("API down"))
+        mock_fp.return_value.search = AsyncMock(side_effect=RuntimeError("API down"))
         result = await search_core(criteria, None, None, storage)
 
     assert result["flight_error"] is not None
@@ -126,11 +126,11 @@ async def test_search_core_with_hotels():
     hotel = _make_hotel()
 
     with (
-        patch("main.DuffelProvider") as mock_dp,
+        patch("main.RapidAPIFlightsProvider") as mock_fp,
         patch("main.DuffelStaysProvider") as mock_hs,
         patch("main.CarsProvider"),
     ):
-        mock_dp.return_value.search = AsyncMock(return_value=[_make_flight()])
+        mock_fp.return_value.search = AsyncMock(return_value=[_make_flight()])
         mock_hs.return_value.search = AsyncMock(return_value=[hotel])
         result = await search_core(criteria, hotel_criteria, None, Storage("sqlite:///:memory:"), max_hotel_results=5)
 
@@ -150,11 +150,11 @@ async def test_search_core_serialize_flight_segments():
     storage = Storage("sqlite:///:memory:")
 
     with (
-        patch("main.DuffelProvider") as mock_dp,
+        patch("main.RapidAPIFlightsProvider") as mock_fp,
         patch("main.DuffelStaysProvider"),
         patch("main.CarsProvider"),
     ):
-        mock_dp.return_value.search = AsyncMock(return_value=[_make_flight()])
+        mock_fp.return_value.search = AsyncMock(return_value=[_make_flight()])
         result = await search_core(criteria, None, None, storage)
 
     seg = result["flights"][0]["segments"][0]
@@ -174,16 +174,16 @@ async def test_search_core_flight_insights_on_second_run():
     storage = Storage("sqlite:///:memory:")
 
     with (
-        patch("main.DuffelProvider") as mock_dp,
+        patch("main.RapidAPIFlightsProvider") as mock_fp,
         patch("main.DuffelStaysProvider"),
         patch("main.CarsProvider"),
     ):
         # Premier snapshot
-        mock_dp.return_value.search = AsyncMock(return_value=[_make_flight(price=500.0)])
+        mock_fp.return_value.search = AsyncMock(return_value=[_make_flight(price=500.0)])
         await search_core(criteria, None, None, storage)
 
         # Deuxième snapshot avec un prix différent
-        mock_dp.return_value.search = AsyncMock(return_value=[_make_flight(price=450.0)])
+        mock_fp.return_value.search = AsyncMock(return_value=[_make_flight(price=450.0)])
         result = await search_core(criteria, None, None, storage)
 
     # Doit avoir des insights (price change)
