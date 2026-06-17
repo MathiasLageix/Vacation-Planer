@@ -1,6 +1,8 @@
 """Fournisseur Duffel Stays pour la recherche d'hébergements."""
+import logging
 import os
-from datetime import datetime, timedelta
+import urllib.parse
+from datetime import datetime
 
 import httpx
 
@@ -8,6 +10,7 @@ from models import HotelSearchCriteria, NormalizedHotel
 
 _BASE_URL = "https://api.duffel.com"
 _DUFFEL_VERSION = "v2"
+_log = logging.getLogger(__name__)
 
 
 def _nights_between(check_in: str, check_out: str) -> int:
@@ -19,7 +22,6 @@ def _nights_between(check_in: str, check_out: str) -> int:
 def _build_deep_link(result: dict, criteria: HotelSearchCriteria) -> str:
     """Construit un deep link Google Hotels."""
     name = result.get("accommodation", {}).get("name", "")
-    import urllib.parse
     query = urllib.parse.quote_plus(f"{name} {criteria.city_iata}")
     return (
         f"https://www.google.com/travel/hotels/search?"
@@ -90,7 +92,7 @@ class DuffelStaysProvider:
             }
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 f"{_BASE_URL}/stays/search_results",
                 json=payload,
@@ -99,7 +101,13 @@ class DuffelStaysProvider:
             resp.raise_for_status()
             data = resp.json()
 
-        raw_results = data.get("data", {}).get("results", [])
+        _log.debug("[duffel_stays] status=%s keys=%s", resp.status_code, list(data.keys()))
+        data_node = data.get("data") or {}
+        if isinstance(data_node, list):
+            raw_results = data_node
+        else:
+            raw_results = data_node.get("results", [])
+        _log.debug("[duffel_stays] %d résultats bruts", len(raw_results))
         hotels = [_parse_result(r, criteria) for r in raw_results]
 
         if criteria.max_price_per_night is not None:

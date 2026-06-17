@@ -34,7 +34,9 @@ L'agent t'amène jusqu'à la page d'achat préremplie ; le paiement reste entre 
 
 - **Python 3.12** + **httpx** (async)
 - **Anthropic SDK** (tool use) comme cerveau de l'agent
-- **Amadeus Self-Service API** (vols, hôtels, autos) + **Duffel** (vols, alternative)
+- **Duffel** (vols + hôtels via Duffel Stays) — Amadeus décommissionné 2026-07-17
+- **FastAPI** + **SSE** pour le backend (`/api/search`, `/api/sessions`, `/api/health`)
+- **Next.js 14** + **Tailwind CSS** pour l'interface web (port 3001)
 - **SQLite** (snapshots de dispo) → Postgres plus tard
 - **APScheduler** pour le re-check périodique
 
@@ -53,42 +55,71 @@ cp .env.example .env   # puis remplis tes clés API
 | Service   | Où l'obtenir                                   | Gratuit pour démarrer |
 |-----------|------------------------------------------------|-----------------------|
 | Anthropic | console.anthropic.com                          | Crédit de départ      |
-| Amadeus   | developers.amadeus.com (Self-Service)          | Oui (quota test)      |
-| Duffel    | duffel.com (optionnel, alternative vols)       | Mode test             |
+| Duffel    | duffel.com                                     | Mode test             |
 
 ## Utilisation
 
 ```bash
-python -m agent          # lance l'agent en mode chat/CLI
+# Interface web (recommandé) — lance FastAPI (:8000) + Next.js (:3001) en parallèle
+make dev
+
+# Ou séparément :
+uvicorn api.main:app --reload          # backend FastAPI sur http://localhost:8000
+cd frontend && npm run dev             # frontend Next.js sur http://localhost:3001
+
+# Mode CLI uniquement
+python main.py
+
+# Scheduler de re-check périodique (mode démon)
+python scheduler.py                    # démarre le daemon
+python scheduler.py --once             # une seule passe (pour les tests)
 ```
 
 ## Roadmap
 
-- **Phase 1 (MVP)** — Recherche de vols + questionnaire + sortie comparative ✅ objectif initial
-- **Phase 2** — Hôtels, autos, snapshots de dispo + insights, scheduler
-- **Phase 3** — UI web, Airbnb/VRBO, alertes de prix
+- **Phase 1 (MVP)** — Recherche de vols + questionnaire + sortie comparative ✅
+- **Phase 2** — Hôtels, autos, snapshots de dispo + insights, scheduler ✅
+- **Phase 3** — UI web + backend FastAPI + correctifs (v0.3.0.0) ✅ — alertes de prix, Airbnb/VRBO, Postgres restants
 
 ## Structure du projet
 
 ```
-travel-search-agent/
+Vacation-Planer/
 ├── CLAUDE.md            # contexte pour Claude Code (à garder à jour)
 ├── README.md
+├── CHANGELOG.md
+├── TODOS.md
+├── VERSION              # version courante (0.3.0.0)
+├── Makefile             # make dev = FastAPI + Next.js en parallèle
 ├── .env.example
 ├── requirements.txt
-├── agent/
-│   ├── __main__.py      # point d'entrée
-│   ├── brain.py         # boucle agent (Claude + tool use)
-│   └── questionnaire.py # collecte des critères
+├── pyproject.toml
+├── main.py              # CLI + search_core() partagé avec l'API
+├── models.py            # dataclasses normalisées (SearchCriteria, FlightResult…)
+├── questionnaire.py     # collecte des critères en mode CLI
+├── display.py           # affichage tabulaire CLI
+├── storage.py           # SQLite via SQLAlchemy — sessions + snapshots
+├── insights.py          # diff prix/dispo entre deux snapshots
+├── scheduler.py         # daemon APScheduler — re-check périodique
 ├── providers/
-│   ├── base.py          # interface commune + modèle normalisé
-│   ├── amadeus.py
-│   └── duffel.py
-├── storage/
-│   ├── db.py            # SQLite
-│   └── snapshots.py     # suivi de dispo dans le temps
-└── insights/
-    └── compare.py       # détection de changements prix/dispo
+│   ├── duffel.py        # vols via Duffel API
+│   ├── duffel_stays.py  # hôtels via Duffel Stays API
+│   └── cars.py          # stub autos (provider à déterminer)
+├── api/
+│   ├── main.py          # app FastAPI
+│   ├── schemas.py       # schémas Pydantic v2
+│   └── routes/
+│       ├── search.py    # POST /api/search (SSE streaming)
+│       └── sessions.py  # GET /api/sessions, GET /api/health
+├── frontend/            # Next.js 14 (port 3001)
+│   ├── app/
+│   │   ├── page.tsx
+│   │   ├── results/page.tsx
+│   │   ├── components/  # SearchForm, FlightCard, HotelCard, InsightBadge
+│   │   └── types.ts
+│   └── package.json
+└── tests/
+    └── test_storage_insights.py
 ```
 
 ## Note légale

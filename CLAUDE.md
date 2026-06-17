@@ -34,11 +34,12 @@ résultats bruts comme une recherche Google.
 | Cerveau de l'agent| Anthropic SDK (tool use)       | Claude appelle lui-même les outils de recherche |
 | HTTP              | httpx (async)                  | Appels parallèles aux fournisseurs |
 | Vols              | Duffel                         | Amadeus décommissionné 2026-07-17 |
-| Hôtels + autos    | À déterminer (Amadeus hors jeu)| Duffel couvre aussi hôtels/autos |
+| Hôtels            | Duffel Stays                   | Duffel Stays API (hôtels) |
+| Autos             | stub `providers/cars.py`       | Aucun provider API dispo — Phase 3 |
 | Stockage          | SQLite → Postgres plus tard    | Snapshots de dispo pour les insights |
 | Scheduler         | APScheduler                    | Re-check périodique des dispos |
 | Secrets           | python-dotenv (.env)           | Clés API hors du code |
-| Interface         | CLI/chat → Next.js (Phase 2)   | Zéro friction au début |
+| Interface         | CLI + Next.js 14 (Phase 3 ✅)  | CLI pour dev, web UI sur port 3001 en prod |
 
 **Hors scope au début :** Airbnb et VRBO (pas d'API publique → scraping fragile,
 remis à la Phase 2). Création de comptes et automatisation du checkout.
@@ -51,9 +52,9 @@ Utilisateur
    ▼
 Agent (Claude + tool use)
    │  appelle en parallèle ↓
-   ├── search_flights(...)   → Amadeus / Duffel
-   ├── search_hotels(...)    → Amadeus
-   └── search_cars(...)      → Amadeus
+   ├── search_flights(...)   → Duffel
+   ├── search_hotels(...)    → Duffel Stays
+   └── search_cars(...)      → stub (provider à venir)
    │
    ▼
 Normalisation des résultats → SQLite (snapshot horodaté)
@@ -79,8 +80,8 @@ Réponse : tableau comparatif + insights + deep links préremplis
 
 - **Phase 1 (MVP)** : recherche de vols Amadeus, questionnaire de base, sortie en
   tableau avec deep links. Une recherche bout-en-bout qui marche.
-- **Phase 2** : ajout hôtels + autos, snapshots de dispo + insights, scheduler. ✅ (sauf scheduler)
-- **Phase 3** : UI web, Airbnb/VRBO (scraping prudent), alertes de prix.
+- **Phase 2** : ajout hôtels + autos, snapshots de dispo + insights, scheduler. ✅
+- **Phase 3** : UI web + backend FastAPI + correctifs. ✅ — Airbnb/VRBO, alertes de prix, Postgres restants.
 
 ## État actuel
 
@@ -97,3 +98,9 @@ Réponse : tableau comparatif + insights + deep links préremplis
 - [x] Questionnaire étendu (vols + hôtels + autos optionnels)
 - [x] Recherches parallèles + affichage unifié (`main.py`)
 - [x] Scheduler APScheduler (`scheduler.py` — daemon + `--once` pour les tests, re-check toutes les N min)
+- [x] Backend FastAPI (`api/` — POST /api/search SSE, GET /api/sessions, GET /api/health)
+- [x] Frontend Next.js 14 (`frontend/` — port 3001, TypeScript, Tailwind, formulaire multistep + page résultats SSE)
+- [x] `Makefile` — `make dev` lance api (:8000) + web (:3001) en parallèle
+- [ ] Alertes de prix (email/push — Phase 3 restant)
+- [ ] Airbnb/VRBO scraping (Phase 3 restant)
+- [ ] Postgres (Phase 3 restant)

@@ -27,3 +27,4 @@ travel_agent.db
 .idea/
 .vscode/
 *.swp
+.gstack/

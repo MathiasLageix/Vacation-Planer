@@ -43,6 +43,7 @@ def _ask_flight_criteria() -> SearchCriteria:
     return_date = return_date_raw if return_date_raw else None
 
     adults = _ask_int("Nombre de passagers adultes", default=1)
+    children = _ask_int("Nombre d'enfants (0-11 ans)", default=0)
     currency = _ask("Devise", default="CAD")
     max_stops_raw = _ask_optional_int("Nombre max d'escales (0 = direct, 1 = 1 escale)")
     max_price_raw = _ask_optional_int(f"Budget max vol ({currency})")
@@ -58,6 +59,7 @@ def _ask_flight_criteria() -> SearchCriteria:
         departure_date=departure_date,
         return_date=return_date,
         adults=adults,
+        children=children,
         max_stops=max_stops_raw,
         preferred_carriers=preferred_carriers,
         max_price=float(max_price_raw) if max_price_raw else None,
