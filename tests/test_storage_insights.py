@@ -55,6 +55,16 @@ def make_hotel(property_id: str, price: float) -> NormalizedHotel:
 
 # ---- Storage tests ----
 
+def test_get_all_sessions(mem_storage, flight_criteria):
+    assert mem_storage.get_all_sessions() == []
+    mem_storage.get_or_create_session("flight", asdict(flight_criteria))
+    sessions = mem_storage.get_all_sessions()
+    assert len(sessions) == 1
+    sid, stype, cjson = sessions[0]
+    assert stype == "flight"
+    assert "YUL" in cjson
+
+
 def test_create_session_idempotent(mem_storage, flight_criteria):
     sid1 = mem_storage.get_or_create_session("flight", asdict(flight_criteria))
     sid2 = mem_storage.get_or_create_session("flight", asdict(flight_criteria))

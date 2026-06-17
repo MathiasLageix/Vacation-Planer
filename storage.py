@@ -149,3 +149,9 @@ class Storage:
         for row in reversed(rows):
             result.append((row.captured_at, json.loads(row.results_json)))
         return result
+
+    def get_all_sessions(self) -> list[tuple[str, str, str]]:
+        """Retourne toutes les sessions : [(session_id, search_type, criteria_json), ...]."""
+        with self._session() as db:
+            rows = db.query(SearchSessionRow).all()
+            return [(r.id, r.search_type, r.criteria_json) for r in rows]
