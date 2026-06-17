@@ -155,7 +155,7 @@ export default function ResultsPage() {
         </div>
         <button
           onClick={() => router.push("/")}
-          className="text-sm text-indigo-600 hover:underline"
+          className="text-sm text-indigo-600 hover:underline min-h-[44px] px-3 -mx-3 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg outline-none"
         >
           ← Nouvelle recherche
         </button>
