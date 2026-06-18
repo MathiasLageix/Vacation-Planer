@@ -353,8 +353,8 @@ async def test_params_currency_lowercase(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_params_adults_children_as_ints(monkeypatch):
-    """Matan Rabi attend adults et children comme entiers séparés (pas une liste passengers)."""
+async def test_params_passengers_as_int_list(monkeypatch):
+    """Matan Rabi attend passengers comme liste d'entiers : 1=adulte, 2=enfant."""
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
 
@@ -363,9 +363,9 @@ async def test_params_adults_children_as_ints(monkeypatch):
     with patch("providers.rapidapi_flights.httpx.AsyncClient", return_value=client):
         await RapidAPIFlightsProvider().search(crit)
 
-    assert captured[0]["adults"] == 2
-    assert captured[0]["children"] == 1
-    assert "passengers" not in captured[0]
+    assert captured[0]["passengers"] == [1, 1, 2]
+    assert "adults" not in captured[0]
+    assert "children" not in captured[0]
 
 
 @pytest.mark.asyncio
