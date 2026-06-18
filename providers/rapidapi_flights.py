@@ -228,7 +228,8 @@ class RapidAPIFlightsProvider:
             "to_airport": criteria.destination,
             "departure_date": departure_date,
             "currency": criteria.currency.lower(),
-            "passengers": ["adult"] * criteria.adults + ["child"] * criteria.children,
+            "adults": criteria.adults,
+            "children": criteria.children,
             "seat_type": 1,  # 1 = Economy
         }
         if criteria.return_date:
