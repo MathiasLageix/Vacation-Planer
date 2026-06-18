@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.5.0.0] - 2026-06-17
+
+### Fixed (BLOCKER — Railway Postgres)
+- **`requirements.txt`** : ajout de `psycopg2-binary>=2.9` — sans ce driver SQLAlchemy ne peut pas ouvrir une connexion Postgres, Railway crashait au démarrage avec `ModuleNotFoundError`.
+- **`storage.py`** : `Storage.__init__` utilise maintenant `os.environ.get("DATABASE_URL", "sqlite:///travel_agent.db")` au lieu d'un défaut hardcodé. Pattern `None`-sentinel pour que la résolution se fasse à l'appel (pas à l'import). Les 4 callsites (`api/routes/sessions.py`, `api/routes/search.py`, `scheduler.py`, `main.py`) héritent automatiquement du bon DATABASE_URL. Bonus : `monkeypatch.setenv("DATABASE_URL")` dans `test_api.py` a désormais l'effet attendu.
+
+### Changed
+- **`api/deps.py`** (nouveau) : singleton `Storage` initialisé une seule fois via `get_storage()`. Remplace les instanciations `Storage()` par requête dans les routes — `Base.metadata.create_all` n'est plus appelé à chaque requête HTTP.
+- **`api/main.py`** : ajout du `lifespan` FastAPI (`@asynccontextmanager`) qui appelle `get_storage()` au démarrage de l'app. Le singleton est prêt avant la première requête.
+- **`api/routes/sessions.py`** : `Storage()` → `get_storage()` (singleton via `api.deps`).
+- **`api/routes/search.py`** : `Storage()` → `get_storage()` (singleton via `api.deps`).
+
+### Tests
+- **`tests/test_storage_insights.py`** : nouveau test `test_storage_reads_database_url_from_env` — vérifie que `Storage()` sans arg lit `DATABASE_URL` depuis `os.environ` (`monkeypatch.setenv` + assert `engine.url`).
+- **`tests/test_api.py`** : fixture `mock_env` reset `api.deps._storage = None` avant chaque test (isolation correcte du singleton). `DATABASE_URL` corrigé en format SQLAlchemy valide (`sqlite:///path`). Mock sessions mis à jour : `api.routes.sessions.Storage` → `api.routes.sessions.get_storage`.
+
 ## [0.4.2.0] - 2026-06-17
 
 ### Changed

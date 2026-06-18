@@ -1,6 +1,7 @@
 """Persistance SQLite des snapshots de résultats de recherche."""
 import hashlib
 import json
+import os
 import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -85,7 +86,9 @@ def _deserialize_hotels(data: list[dict]) -> list[NormalizedHotel]:
 
 
 class Storage:
-    def __init__(self, database_url: str = "sqlite:///travel_agent.db") -> None:
+    def __init__(self, database_url: str | None = None) -> None:
+        if database_url is None:
+            database_url = os.environ.get("DATABASE_URL", "sqlite:///travel_agent.db")
         self._engine = create_engine(database_url)
         Base.metadata.create_all(self._engine)
 

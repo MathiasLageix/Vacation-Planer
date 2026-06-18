@@ -6,10 +6,10 @@ import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from api.deps import get_storage
 from api.schemas import SearchRequest
 from main import search_core
 from models import CarSearchCriteria, HotelSearchCriteria, SearchCriteria
-from storage import Storage
 
 router = APIRouter()
 _log = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ async def search(req: SearchRequest) -> StreamingResponse:
 
         try:
             result = await asyncio.wait_for(
-                search_core(flight_criteria, hotel_criteria, car_criteria, Storage(), max_hotel_results=5),
+                search_core(flight_criteria, hotel_criteria, car_criteria, get_storage(), max_hotel_results=5),
                 timeout=30.0,
             )
         except asyncio.TimeoutError:

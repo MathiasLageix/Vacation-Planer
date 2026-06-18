@@ -164,3 +164,11 @@ def test_hotel_insights_use_property_id():
     report = compare_snapshots("sid", "hotel", t1, old, t2, new)
     assert len(report.price_changes) == 1
     assert report.price_changes[0].delta == pytest.approx(-50.0)
+
+
+def test_storage_reads_database_url_from_env(tmp_path, monkeypatch):
+    """Storage() sans arg doit lire DATABASE_URL depuis os.environ (T-ENG-02)."""
+    db_path = str(tmp_path / "env_test.db")
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    s = Storage()
+    assert str(s._engine.url) == f"sqlite:///{db_path}"
