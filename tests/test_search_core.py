@@ -20,7 +20,7 @@ def mock_env(monkeypatch, tmp_path):
     monkeypatch.setenv("DATABASE_URL", str(tmp_path / "test.db"))
 
 
-def _make_flight(price: float = 500.0, stops: int = 0) -> NormalizedFlight:
+def _make_flight(price: float = 500.0, stops: int = 0, offer_id: str | None = None) -> NormalizedFlight:
     seg = FlightSegment(
         origin="YUL",
         destination="CDG",
@@ -32,7 +32,7 @@ def _make_flight(price: float = 500.0, stops: int = 0) -> NormalizedFlight:
     )
     return NormalizedFlight(
         provider="duffel",
-        offer_id=f"off_{price}",
+        offer_id=offer_id or f"off_{price}",
         total_price=price,
         currency="CAD",
         stops=stops,
@@ -107,7 +107,7 @@ async def test_search_core_flight_error_propagated():
         result = await search_core(criteria, None, None, storage)
 
     assert result["flight_error"] is not None
-    assert "API down" in result["flight_error"]
+    assert "indisponible" in result["flight_error"]
     assert result["flights"] == []
 
 
@@ -178,14 +178,15 @@ async def test_search_core_flight_insights_on_second_run():
         patch("main.DuffelStaysProvider"),
         patch("main.CarsProvider"),
     ):
-        # Premier snapshot
-        mock_fp.return_value.search = AsyncMock(return_value=[_make_flight(price=500.0)])
+        # Premier snapshot — même offer_id pour que compare_snapshots détecte un changement de prix
+        mock_fp.return_value.search = AsyncMock(return_value=[_make_flight(price=500.0, offer_id="off_YUL_CDG")])
         await search_core(criteria, None, None, storage)
 
-        # Deuxième snapshot avec un prix différent
-        mock_fp.return_value.search = AsyncMock(return_value=[_make_flight(price=450.0)])
+        # Deuxième snapshot avec un prix réduit sur le même offer_id
+        mock_fp.return_value.search = AsyncMock(return_value=[_make_flight(price=450.0, offer_id="off_YUL_CDG")])
         result = await search_core(criteria, None, None, storage)
 
-    # Doit avoir des insights (price change)
+    # Doit avoir un price_change de -50 CAD
     assert result["flight_insights"] is not None
-    assert "price_changes" in result["flight_insights"]
+    assert len(result["flight_insights"]["price_changes"]) == 1
+    assert result["flight_insights"]["price_changes"][0]["delta"] == pytest.approx(-50.0)

@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 Format: `## [MAJOR.MINOR.PATCH.MICRO] - YYYY-MM-DD`
 
+## [0.6.0.0] - 2026-06-17
+
+### Security
+- **`api/routes/search.py`** : `flight_error` mappait `str(exception)` directement au client — exposait l'URL upstream complète en cas d'erreur HTTP Crawlio. Remplacé par un message générique (`HTTP {code}` pour les erreurs HTTP, message opaque pour les autres) ; l'exception réelle est loguée server-side via `_log.error`.
+- **`api/main.py`** : CORS `allow_methods=["*"]` et `allow_headers=["*"]` restreints à `["GET", "POST", "OPTIONS"]` et `["Content-Type", "Accept", "Cache-Control"]`.
+- **`frontend/app/api/[...path]/route.ts`** : ajout d'une whitelist `ALLOWED_PATHS = {"search", "sessions", "health"}` — les segments de chemin non listés ou contenant `..` retournent 404, éliminant le risque de traversée de chemin interne.
+
+### Fixed
+- **`providers/rapidapi_flights.py`** : `os.environ["RAPIDAPI_KEY"]` (KeyError silencieux) → `os.environ.get("RAPIDAPI_KEY")` avec `RuntimeError` descriptif si absent.
+- **`providers/rapidapi_flights.py`** : champs de durée (`duration_seconds`, `departure_flight_duration_seconds`, `return_flight_duration_seconds`) castés via `int()` avant `// 60` — crash `TypeError` si l'API retourne une string au lieu d'un entier.
+- **`providers/rapidapi_flights.py`** : pour les voyages aller-retour avec `flexible_days`, les dates candidates supérieures ou égales à `return_date` sont maintenant filtrées — évitait des requêtes impossibles (départ ≥ retour) causant des 4xx silencieux.
+- **`providers/rapidapi_flights.py`** : clé de cache construite via `json.dumps(..., sort_keys=True)` au lieu de `"|".join(parts)` — élimine les collisions de hash si un champ contient `|`.
+- **`main.py`** : `hasattr(seg.get("departure_at"), "isoformat")` → `isinstance(seg.get("departure_at"), datetime)` — plus lisible et invariant explicite.
+- **`main.py`** : hôtels sérialisés avec `asdict(h) | {"raw": None}` (raw envoyé comme null) → filtrage propre `{k: v for k, v in asdict(h).items() if k != "raw"}`.
+- **`api/routes/search.py`** : le bloc de `yield` post-recherche (events `flights`, `hotels`, `insights`, `done`) n'était pas protégé — un champ non-sérialisable fermait le stream sans event `error` ni `done`. Enveloppé dans `try/except` avec `yield _to_sse("error", ...)` terminal.
+- **`tests/test_search_core.py`** : `test_search_core_flight_insights_on_second_run` utilisait `offer_id=f"off_{price}"` — les deux snapshots avaient des IDs différents donc `price_changes` était toujours vide (assertion vacuouse). Corrigé avec `offer_id="off_YUL_CDG"` fixe ; assertion renforcée : `len(price_changes) == 1` et `delta == pytest.approx(-50.0)`.
+
+### Changed
+- **`tests/test_rapidapi_flights.py`** : `clear_cache` retiré des signatures de `test_cache_hit_skips_api_call`, `test_cache_expired_calls_api_again`, `test_cache_different_criteria_different_entries` (fixture `autouse=True` s'applique déjà).
+- **`TODOS.md`** : ajout de 3 nouveaux items (refactoring `search_core`, datetime timezone SQLite, couverture tests erreurs fournisseurs) ; race condition TOCTOU promue P2 ; DATABASE_URL marqué complété.
+
+## [0.5.0.0] - 2026-06-17
+
+### Fixed (BLOCKER — Railway Postgres)
+- **`requirements.txt`** : ajout de `psycopg2-binary>=2.9` — sans ce driver SQLAlchemy ne peut pas ouvrir une connexion Postgres, Railway crashait au démarrage avec `ModuleNotFoundError`.
+- **`storage.py`** : `Storage.__init__` utilise maintenant `os.environ.get("DATABASE_URL", "sqlite:///travel_agent.db")` au lieu d'un défaut hardcodé. Pattern `None`-sentinel pour que la résolution se fasse à l'appel (pas à l'import). Les 4 callsites (`api/routes/sessions.py`, `api/routes/search.py`, `scheduler.py`, `main.py`) héritent automatiquement du bon DATABASE_URL. Bonus : `monkeypatch.setenv("DATABASE_URL")` dans `test_api.py` a désormais l'effet attendu.
+
+### Changed
+- **`api/deps.py`** (nouveau) : singleton `Storage` initialisé une seule fois via `get_storage()`. Remplace les instanciations `Storage()` par requête dans les routes — `Base.metadata.create_all` n'est plus appelé à chaque requête HTTP.
+- **`api/main.py`** : ajout du `lifespan` FastAPI (`@asynccontextmanager`) qui appelle `get_storage()` au démarrage de l'app. Le singleton est prêt avant la première requête.
+- **`api/routes/sessions.py`** : `Storage()` → `get_storage()` (singleton via `api.deps`).
+- **`api/routes/search.py`** : `Storage()` → `get_storage()` (singleton via `api.deps`).
+
+### Tests
+- **`tests/test_storage_insights.py`** : nouveau test `test_storage_reads_database_url_from_env` — vérifie que `Storage()` sans arg lit `DATABASE_URL` depuis `os.environ` (`monkeypatch.setenv` + assert `engine.url`).
+- **`tests/test_api.py`** : fixture `mock_env` reset `api.deps._storage = None` avant chaque test (isolation correcte du singleton). `DATABASE_URL` corrigé en format SQLAlchemy valide (`sqlite:///path`). Mock sessions mis à jour : `api.routes.sessions.Storage` → `api.routes.sessions.get_storage`.
+
 ## [0.4.2.0] - 2026-06-17
 
 ### Changed

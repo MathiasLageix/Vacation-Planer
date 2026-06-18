@@ -12,7 +12,9 @@ from datetime import datetime
 @pytest.fixture(autouse=True)
 def mock_env(monkeypatch, tmp_path):
     monkeypatch.setenv("DUFFEL_API_KEY", "duffel_test_fake")
-    monkeypatch.setenv("DATABASE_URL", str(tmp_path / "test_api.db"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/test_api.db")
+    import api.deps
+    api.deps._storage = None  # reset singleton so DATABASE_URL prend effet
 
 
 def _make_flight(price: float = 500.0) -> NormalizedFlight:
@@ -310,8 +312,8 @@ def test_search_hotel_optional():
 def test_sessions_empty():
     """GET /api/sessions retourne [] quand la DB est vide."""
     client = TestClient(app)
-    with patch("api.routes.sessions.Storage") as mock_storage_cls:
-        mock_storage_cls.return_value.get_all_sessions.return_value = []
+    with patch("api.routes.sessions.get_storage") as mock_get_storage:
+        mock_get_storage.return_value.get_all_sessions.return_value = []
         resp = client.get("/api/sessions")
     assert resp.status_code == 200
     assert resp.json() == []

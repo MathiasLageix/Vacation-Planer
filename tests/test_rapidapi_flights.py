@@ -580,7 +580,7 @@ def _make_client_mock(raw_flights: list[dict]):
 
 
 @pytest.mark.asyncio
-async def test_cache_hit_skips_api_call(monkeypatch, clear_cache):
+async def test_cache_hit_skips_api_call(monkeypatch):
     """Le deuxième appel identique ne contacte pas l'API."""
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
@@ -600,7 +600,7 @@ async def test_cache_hit_skips_api_call(monkeypatch, clear_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_expired_calls_api_again(monkeypatch, clear_cache):
+async def test_cache_expired_calls_api_again(monkeypatch):
     """Après expiration du TTL, l'API est rappelée."""
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
@@ -621,7 +621,7 @@ async def test_cache_expired_calls_api_again(monkeypatch, clear_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_different_criteria_different_entries(monkeypatch, clear_cache):
+async def test_cache_different_criteria_different_entries(monkeypatch):
     """Deux critères différents produisent deux entrées de cache distinctes."""
     monkeypatch.setenv("RAPIDAPI_KEY", "test_key")
     from providers.rapidapi_flights import RapidAPIFlightsProvider
