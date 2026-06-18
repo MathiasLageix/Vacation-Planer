@@ -266,6 +266,14 @@ class RapidAPIFlightsProvider:
             raise
 
         data = resp.json()
+        _log.debug(
+            "RapidAPI réponse brute %s→%s %s : type=%s body=%s",
+            criteria.origin,
+            criteria.destination,
+            departure_date,
+            type(data).__name__,
+            str(data)[:2000],
+        )
         if isinstance(data, list):
             return data
         if isinstance(data, dict):
