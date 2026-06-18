@@ -1,6 +1,9 @@
 """Point d'entrée : questionnaire → recherches parallèles → snapshots → insights → affichage."""
 import asyncio
+import logging
 from dataclasses import asdict
+
+_log = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 
@@ -43,7 +46,16 @@ async def search_core(
     hotels = results[1] if hotel_criteria and len(results) > 1 and not isinstance(results[1], Exception) else []
     cars = results[-1] if car_criteria and not isinstance(results[-1], Exception) else []
 
-    flight_error = str(results[0]) if isinstance(results[0], Exception) else None
+    if isinstance(results[0], Exception):
+        import httpx
+        exc = results[0]
+        if isinstance(exc, httpx.HTTPStatusError):
+            flight_error = f"Erreur du fournisseur de vols (HTTP {exc.response.status_code}). Réessayez."
+        else:
+            flight_error = "Le fournisseur de vols est temporairement indisponible. Réessayez."
+        _log.error("Erreur recherche vols : %s", exc, exc_info=True)
+    else:
+        flight_error = None
 
     # Snapshots + insights vols
     flight_session = storage.get_or_create_session("flight", asdict(flight_criteria))
@@ -78,12 +90,12 @@ async def search_core(
         }
 
     def _serialize_flight(f) -> dict:
+        from datetime import datetime as _dt
         d = asdict(f)
-        # Convertit les datetime des segments en ISO string
         for seg in d.get("segments", []):
-            if hasattr(seg.get("departure_at"), "isoformat"):
+            if isinstance(seg.get("departure_at"), _dt):
                 seg["departure_at"] = seg["departure_at"].isoformat()
-            if hasattr(seg.get("arrival_at"), "isoformat"):
+            if isinstance(seg.get("arrival_at"), _dt):
                 seg["arrival_at"] = seg["arrival_at"].isoformat()
         d.pop("raw", None)
         return d
@@ -91,7 +103,7 @@ async def search_core(
     return {
         "session_id": flight_session,
         "flights": [_serialize_flight(f) for f in flights],
-        "hotels": [asdict(h) | {"raw": None} for h in hotels],
+        "hotels": [{k: v for k, v in asdict(h).items() if k != "raw"} for h in hotels],
         "cars": [asdict(c) | {"raw": None} for c in cars],
         "flight_insights": _serialize_insights(flight_insights),
         "hotel_insights": _serialize_insights(hotel_insights),

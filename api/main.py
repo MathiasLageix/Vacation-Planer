@@ -26,8 +26,8 @@ _allowed_origins = [o.strip() for o in _raw.split(",") if o.strip()] or ["http:/
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept", "Cache-Control"],
 )
 
 app.include_router(search_router, prefix="/api")

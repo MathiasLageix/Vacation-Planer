@@ -1,8 +1,13 @@
 import { NextRequest } from "next/server";
 
 const API_URL = (process.env.API_URL || "http://localhost:8000").replace(/\/$/, "");
+const ALLOWED_PATHS = new Set(["search", "sessions", "health"]);
 
 async function proxy(request: NextRequest, params: { path: string[] }) {
+  const firstSegment = params.path[0];
+  if (!firstSegment || !ALLOWED_PATHS.has(firstSegment) || params.path.some(s => s.includes(".."))) {
+    return new Response("Not found", { status: 404 });
+  }
   const path = params.path.join("/");
   const search = request.nextUrl.search;
   const url = `${API_URL}/api/${path}${search}`;

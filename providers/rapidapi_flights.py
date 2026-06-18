@@ -116,7 +116,7 @@ def _parse_one_way(raw: dict, criteria: SearchCriteria, date: str) -> Normalized
     carrier_code = _to_iata(raw.get("airline", ""))
     dep_str = raw.get("departure_description", raw.get("departure_time", ""))
     dep_dt, arr_dt = _parse_description(dep_str, date)
-    duration_min = (raw.get("duration_seconds", raw.get("duration", 0)) or 0) // 60
+    duration_min = int(raw.get("duration_seconds", raw.get("duration", 0)) or 0) // 60
 
     segment = FlightSegment(
         origin=criteria.origin,
@@ -156,10 +156,10 @@ def _parse_roundtrip(raw: dict, criteria: SearchCriteria) -> NormalizedFlight:
         criteria.return_date or criteria.departure_date,
     )
 
-    dep_min = (raw.get("departure_flight_duration_seconds",
-                        raw.get("departure_duration", 0)) or 0) // 60
-    ret_min = (raw.get("return_flight_duration_seconds",
-                        raw.get("return_duration", 0)) or 0) // 60
+    dep_min = int(raw.get("departure_flight_duration_seconds",
+                          raw.get("departure_duration", 0)) or 0) // 60
+    ret_min = int(raw.get("return_flight_duration_seconds",
+                          raw.get("return_duration", 0)) or 0) // 60
 
     segments = [
         FlightSegment(
@@ -197,26 +197,32 @@ def _parse_roundtrip(raw: dict, criteria: SearchCriteria) -> NormalizedFlight:
 
 def _cache_key(criteria: SearchCriteria, max_results: int) -> str:
     """Clé de cache stable pour une combinaison critères + max_results."""
-    parts = [
-        criteria.origin,
-        criteria.destination,
-        criteria.departure_date,
-        criteria.return_date or "",
-        str(criteria.adults),
-        str(criteria.children),
-        criteria.currency.lower(),
-        str(criteria.flexible_days),
-        str(criteria.max_stops),
-        ",".join(sorted(criteria.preferred_carriers)),
-        str(criteria.max_price),
-        str(max_results),
-    ]
-    return hashlib.md5("|".join(parts).encode()).hexdigest()
+    import json
+    payload = {
+        "origin": criteria.origin,
+        "destination": criteria.destination,
+        "departure_date": criteria.departure_date,
+        "return_date": criteria.return_date,
+        "adults": criteria.adults,
+        "children": criteria.children,
+        "currency": criteria.currency.lower(),
+        "flexible_days": criteria.flexible_days,
+        "max_stops": criteria.max_stops,
+        "preferred_carriers": sorted(criteria.preferred_carriers),
+        "max_price": criteria.max_price,
+        "max_results": max_results,
+    }
+    return hashlib.md5(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
 class RapidAPIFlightsProvider:
     def __init__(self) -> None:
-        self.api_key = os.environ["RAPIDAPI_KEY"]
+        key = os.environ.get("RAPIDAPI_KEY")
+        if not key:
+            raise RuntimeError(
+                "RAPIDAPI_KEY non définie — ajoutez-la à .env (voir .env.example)"
+            )
+        self.api_key = key
         self._headers = {
             "x-rapidapi-host": _RAPIDAPI_HOST,
             "x-rapidapi-key": self.api_key,
@@ -299,9 +305,15 @@ class RapidAPIFlightsProvider:
         dates = [criteria.departure_date]
         if criteria.flexible_days > 0:
             base = datetime.strptime(criteria.departure_date, "%Y-%m-%d")
+            return_dt = (
+                datetime.strptime(criteria.return_date, "%Y-%m-%d")
+                if criteria.return_date
+                else None
+            )
             for delta in range(1, criteria.flexible_days + 1):
-                dates.append((base + timedelta(days=delta)).strftime("%Y-%m-%d"))
-                dates.append((base - timedelta(days=delta)).strftime("%Y-%m-%d"))
+                for candidate_dt in (base + timedelta(days=delta), base - timedelta(days=delta)):
+                    if return_dt is None or candidate_dt < return_dt:
+                        dates.append(candidate_dt.strftime("%Y-%m-%d"))
 
         is_roundtrip = bool(criteria.return_date)
         all_flights: list[NormalizedFlight] = []

@@ -50,20 +50,24 @@ async def search(req: SearchRequest) -> StreamingResponse:
             yield _to_sse("error", {"message": result["flight_error"]})
             return
 
-        yield _to_sse("flights", {"data": result["flights"]})
-        await asyncio.sleep(0)
-
-        if result["hotels"]:
-            yield _to_sse("hotels", {"data": result["hotels"]})
+        try:
+            yield _to_sse("flights", {"data": result["flights"]})
             await asyncio.sleep(0)
 
-        if result["flight_insights"]:
-            yield _to_sse("insights", {"type": "flight", "data": result["flight_insights"]})
+            if result["hotels"]:
+                yield _to_sse("hotels", {"data": result["hotels"]})
+                await asyncio.sleep(0)
 
-        if result["hotel_insights"]:
-            yield _to_sse("insights", {"type": "hotel", "data": result["hotel_insights"]})
+            if result["flight_insights"]:
+                yield _to_sse("insights", {"type": "flight", "data": result["flight_insights"]})
 
-        yield _to_sse("done", {"session_id": result["session_id"]})
+            if result["hotel_insights"]:
+                yield _to_sse("insights", {"type": "hotel", "data": result["hotel_insights"]})
+
+            yield _to_sse("done", {"session_id": result["session_id"]})
+        except Exception:
+            _log.exception("Erreur lors de la sérialisation SSE")
+            yield _to_sse("error", {"message": "Une erreur interne est survenue. Réessayez."})
 
     return StreamingResponse(
         event_stream(),
